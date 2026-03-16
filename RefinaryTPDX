@@ -336,90 +336,85 @@ local function toggleFly()
     return flyEnabled
 end
 
--- FULLBRIGHT — loop Heartbeat resiste ao RC2 que reescreve Lighting a cada frame
--- Todos os vars ficam dentro do do block para nao aumentar locals do escopo principal
+-- FULLBRIGHT — cancela tweens do RC2 e mantém via RenderStepped
 do
-    local origFogEnd2   = Lighting.FogEnd
-    local origFogStart2 = Lighting.FogStart
-    local origShadows2  = Lighting.GlobalShadows
-    local origOutdoor2  = Lighting.OutdoorAmbient
-    local fbLoop2       = nil
-    local fbDisabled2   = {}
+    local origFogEnd2=Lighting.FogEnd; local origFogStart2=Lighting.FogStart
+    local origShadows2=Lighting.GlobalShadows; local origOutdoor2=Lighting.OutdoorAmbient
+    local fbLoop2=nil; local fbDisabled2={}
+    local TS=game:GetService("TweenService")
 
     local function fbApply2()
-        Lighting.Ambient        = Color3.new(1,1,1)
-        Lighting.Brightness     = 2
-        Lighting.FogEnd         = 1e9
-        Lighting.FogStart       = 1e9
-        Lighting.GlobalShadows  = false
-        Lighting.OutdoorAmbient = Color3.new(1,1,1)
-        local atm = Lighting:FindFirstChildOfClass("Atmosphere")
-        if atm then pcall(function()
-            atm.Density=0; atm.Haze=0; atm.Glare=0; atm.Offset=0
-        end) end
+        -- Cancela qualquer Tween ativo no Lighting
+        pcall(function()
+            for _,t in pairs(TS:GetPlayingTweens and TS:GetPlayingTweens() or {}) do
+                if t.Instance==Lighting then t:Cancel() end
+            end
+        end)
+        Lighting.Ambient=Color3.new(1,1,1); Lighting.Brightness=2
+        Lighting.FogEnd=1e9; Lighting.FogStart=1e9
+        Lighting.GlobalShadows=false; Lighting.OutdoorAmbient=Color3.new(1,1,1)
+        local atm=Lighting:FindFirstChildOfClass("Atmosphere")
+        if atm then pcall(function() atm.Density=0;atm.Haze=0;atm.Glare=0;atm.Offset=0 end) end
     end
 
     local function fbOff2()
-        fbDisabled2 = {}
-        for _, e in pairs(Lighting:GetDescendants()) do
+        fbDisabled2={}
+        for _,e in pairs(Lighting:GetDescendants()) do
             if (e:IsA("BlurEffect") or e:IsA("ColorCorrectionEffect")
                 or e:IsA("SunRaysEffect") or e:IsA("DepthOfFieldEffect")
-                or e:IsA("BloomEffect") or e:IsA("PostEffect"))
-                and e.Enabled then
-                e.Enabled = false
-                table.insert(fbDisabled2, e)
+                or e:IsA("BloomEffect") or e:IsA("PostEffect")) and e.Enabled then
+                e.Enabled=false; table.insert(fbDisabled2,e)
+            end
+        end
+        -- Remove scripts de lighting do RC2 (desativa temporariamente)
+        for _,s in pairs(Lighting:GetDescendants()) do
+            if s:IsA("LocalScript") or s:IsA("Script") then
+                pcall(function() s.Disabled=true end)
             end
         end
     end
 
-    -- Sobrescreve toggleFullbright definido antes
-    toggleFullbright = function()
-        fullbrightOn = not fullbrightOn
+    local function fbRestore2()
+        for _,s in pairs(Lighting:GetDescendants()) do
+            if s:IsA("LocalScript") or s:IsA("Script") then
+                pcall(function() s.Disabled=false end)
+            end
+        end
+    end
+
+    toggleFullbright=function()
+        fullbrightOn=not fullbrightOn
         if fullbrightOn then
-            origAmbient    = Lighting.Ambient
-            origBrightness = Lighting.Brightness
-            origFogEnd2    = Lighting.FogEnd
-            origFogStart2  = Lighting.FogStart
-            origShadows2   = Lighting.GlobalShadows
-            origOutdoor2   = Lighting.OutdoorAmbient
+            origAmbient=Lighting.Ambient; origBrightness=Lighting.Brightness
+            origFogEnd2=Lighting.FogEnd; origFogStart2=Lighting.FogStart
+            origShadows2=Lighting.GlobalShadows; origOutdoor2=Lighting.OutdoorAmbient
             fbOff2(); fbApply2()
             if fbLoop2 then fbLoop2:Disconnect() end
-            fbLoop2 = RunService.Heartbeat:Connect(function()
-                if not fullbrightOn then fbLoop2:Disconnect(); fbLoop2=nil; return end
-                -- Reaplica sempre (nao so quando diferente) para resistir a tweens
-                Lighting.Ambient        = Color3.new(1,1,1)
-                Lighting.Brightness     = 2
-                Lighting.FogEnd         = 1e9
-                Lighting.FogStart       = 1e9
-                Lighting.GlobalShadows  = false
-                Lighting.OutdoorAmbient = Color3.new(1,1,1)
-                -- Mantém efeitos off
-                for _, e in ipairs(fbDisabled2) do
-                    if e and e.Parent and e.Enabled then
-                        pcall(function() e.Enabled=false end)
-                    end
+            -- RenderStepped tem prioridade maior que Heartbeat
+            fbLoop2=RunService.RenderStepped:Connect(function()
+                if not fullbrightOn then fbLoop2:Disconnect();fbLoop2=nil;return end
+                Lighting.Ambient=Color3.new(1,1,1); Lighting.Brightness=2
+                Lighting.FogEnd=1e9; Lighting.FogStart=1e9
+                Lighting.GlobalShadows=false; Lighting.OutdoorAmbient=Color3.new(1,1,1)
+                for _,e in ipairs(fbDisabled2) do
+                    if e and e.Parent and e.Enabled then pcall(function() e.Enabled=false end) end
                 end
-                -- Atmosphere
                 local atm2=Lighting:FindFirstChildOfClass("Atmosphere")
-                if atm2 then pcall(function()
-                    if atm2.Density~=0 then atm2.Density=0 end
-                    if atm2.Haze~=0    then atm2.Haze=0    end
-                end) end
+                if atm2 then
+                    if atm2.Density~=0 then pcall(function() atm2.Density=0 end) end
+                    if atm2.Haze~=0    then pcall(function() atm2.Haze=0    end) end
+                end
             end)
         else
-            if fbLoop2 then fbLoop2:Disconnect(); fbLoop2=nil end
-            Lighting.Ambient        = origAmbient
-            Lighting.Brightness     = origBrightness
-            Lighting.FogEnd         = origFogEnd2
-            Lighting.FogStart       = origFogStart2
-            Lighting.GlobalShadows  = origShadows2
-            Lighting.OutdoorAmbient = origOutdoor2
-            local atm = Lighting:FindFirstChildOfClass("Atmosphere")
-            if atm then pcall(function()
-                atm.Density=0.3; atm.Haze=0; atm.Glare=0; atm.Offset=0.25
-            end) end
-            for _, e in ipairs(fbDisabled2) do pcall(function() e.Enabled=true end) end
-            fbDisabled2 = {}
+            if fbLoop2 then fbLoop2:Disconnect();fbLoop2=nil end
+            fbRestore2()
+            Lighting.Ambient=origAmbient; Lighting.Brightness=origBrightness
+            Lighting.FogEnd=origFogEnd2; Lighting.FogStart=origFogStart2
+            Lighting.GlobalShadows=origShadows2; Lighting.OutdoorAmbient=origOutdoor2
+            local atm=Lighting:FindFirstChildOfClass("Atmosphere")
+            if atm then pcall(function() atm.Density=0.3;atm.Haze=0;atm.Glare=0;atm.Offset=0.25 end) end
+            for _,e in ipairs(fbDisabled2) do pcall(function() e.Enabled=true end) end
+            fbDisabled2={}
         end
         return fullbrightOn
     end
@@ -546,6 +541,43 @@ MinBtn.BackgroundColor3=C.accent; MinBtn.BorderSizePixel=0
 MinBtn.Text="—"; MinBtn.TextColor3=Color3.new(1,1,1)
 MinBtn.Font=Enum.Font.GothamBold; MinBtn.TextSize=13; MinBtn.ZIndex=14
 Instance.new("UICorner",MinBtn).CornerRadius=UDim.new(0,7)
+
+-- Botao FECHAR (X) — desativa tudo e apaga a GUI
+local CloseBtn=Instance.new("TextButton",Hdr)
+CloseBtn.Size=UDim2.new(0,30,0,30); CloseBtn.Position=UDim2.new(1,-72,0,8)
+CloseBtn.BackgroundColor3=C.danger; CloseBtn.BorderSizePixel=0
+CloseBtn.Text="✕"; CloseBtn.TextColor3=Color3.new(1,1,1)
+CloseBtn.Font=Enum.Font.GothamBold; CloseBtn.TextSize=13; CloseBtn.ZIndex=14
+Instance.new("UICorner",CloseBtn).CornerRadius=UDim.new(0,7)
+CloseBtn.MouseButton1Click:Connect(function()
+    -- Desativa fullbright se ativo
+    if fullbrightOn then
+        fullbrightOn=false
+        pcall(toggleFullbright) -- restaura lighting
+        fullbrightOn=false -- garante off
+    end
+    -- Desativa fly se ativo
+    if flyEnabled then
+        flyEnabled=false
+        pcall(function()
+            if flyBodyVel  then flyBodyVel:Destroy()  flyBodyVel=nil  end
+            if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro=nil end
+            if flyConn     then flyConn:Disconnect()  flyConn=nil     end
+        end)
+        local hum=getHum(); if hum then hum.PlatformStand=false end
+    end
+    -- Para walkspeed
+    if wsConn then wsConn:Disconnect(); wsConn=nil end
+    local hum=getHum(); if hum then hum.WalkSpeed=16 end
+    -- Remove todos os ESP (highlights e billboards no workspace)
+    for _,obj in pairs(workspace:GetChildren()) do
+        if obj:IsA("Highlight") or obj:IsA("BillboardGui") then
+            pcall(function() obj:Destroy() end)
+        end
+    end
+    -- Destroi a GUI inteira (limpa tudo)
+    Gui:Destroy()
+end)
 
 -- ─── Scroll ───
 local Scr=Instance.new("ScrollingFrame",Win)
@@ -1877,75 +1909,119 @@ end)
 
 -- ESP DE DROPS e AUTO-DESCOBERTA
 do
-    local dropESP2={};local dropESPOn2=true;local dropConn2=nil
+    local dropESP2={};local dropESPOn2=true
 
-    local function refreshDrop()
-        if not dropESPOn2 then
-            for p,d in pairs(dropESP2) do
-                pcall(function() d.hl:Destroy() end)
-                pcall(function() if d.bb then d.bb:Destroy() end end)
-                dropESP2[p]=nil
+    local function makeDropESP(obj)
+        if not dropESPOn2 then return end
+        if dropESP2[obj] then return end
+        if not obj:IsA("BasePart") then return end
+        -- Le nome do item
+        local dn="Drop"
+        task.wait(0.1) -- espera filhos aparecerem
+        for _,ch in pairs(obj:GetChildren()) do
+            if ch:IsA("StringValue") and ch.Value~="" then dn=ch.Value; break end
+            if ch:IsA("BillboardGui") then
+                local tl=ch:FindFirstChildOfClass("TextLabel")
+                if tl and tl.Text~="" then dn=tl.Text; break end
             end
-            return
         end
-        local cands={}
-        -- Workspace.Grab.MaterialPart (confirmado pelo spy)
-        local grabF=workspace:FindFirstChild("Grab")
-        if grabF then
-            local mpF=grabF:FindFirstChild("MaterialPart")
-            if mpF then for _,o in pairs(mpF:GetChildren()) do if o:IsA("BasePart") then table.insert(cands,o) end end end
-            for _,o in pairs(grabF:GetChildren()) do if o:IsA("BasePart") and o.Name=="MaterialPart" then table.insert(cands,o) end end
+        local col=Color3.fromRGB(255,200,60)
+        for _,od in ipairs(ORE_DATA) do
+            local low=string.lower(dn)
+            if low:find(string.lower(od.name),1,true)
+            or (od.drop and low:find(string.lower(od.drop),1,true)) then
+                col=od.color; break
+            end
         end
-        -- fallback: workspace direto
-        for _,o in pairs(workspace:GetChildren()) do if o:IsA("BasePart") and o.Name=="MaterialPart" then table.insert(cands,o) end end
+        local hl=Instance.new("Highlight"); hl.Adornee=obj
+        hl.FillColor=col; hl.OutlineColor=col
+        hl.FillTransparency=0.35; hl.OutlineTransparency=0
+        hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop; hl.Parent=workspace
+        local bb=Instance.new("BillboardGui"); bb.Adornee=obj
+        bb.Size=UDim2.new(0,110,0,20); bb.StudsOffset=Vector3.new(0,3,0)
+        bb.AlwaysOnTop=true; bb.MaxDistance=120; bb.Parent=workspace
+        local lb3=Instance.new("TextLabel",bb); lb3.Size=UDim2.new(1,0,1,0)
+        lb3.BackgroundTransparency=1; lb3.TextColor3=col
+        lb3.Font=Enum.Font.GothamBold; lb3.TextSize=12; lb3.Text=dn
+        lb3.TextStrokeTransparency=0; lb3.TextStrokeColor3=Color3.new(0,0,0)
+        dropESP2[obj]={hl=hl,bb=bb}
+        -- Remove quando o item desaparecer
+        obj.AncestryChanged:Connect(function()
+            if not obj.Parent then
+                pcall(function() hl:Destroy() end)
+                pcall(function() bb:Destroy() end)
+                dropESP2[obj]=nil
+            end
+        end)
+    end
 
-        local active={}
-        for _,obj in pairs(cands) do
-            active[obj]=true
-            if not dropESP2[obj] then
-                local dn="Drop"
-                for _,ch in pairs(obj:GetChildren()) do
-                    if ch:IsA("StringValue") and ch.Value~="" then dn=ch.Value; break end
-                    if ch:IsA("BillboardGui") then local tl=ch:FindFirstChildOfClass("TextLabel"); if tl and tl.Text~="" then dn=tl.Text; break end end
-                end
-                local col=Color3.fromRGB(255,200,60)
-                for _,od in ipairs(ORE_DATA) do
-                    local low=string.lower(dn)
-                    if low:find(string.lower(od.name),1,true) or (od.drop and low:find(string.lower(od.drop),1,true)) then col=od.color;break end
-                end
-                local hl=Instance.new("Highlight"); hl.Adornee=obj; hl.FillColor=col; hl.OutlineColor=col
-                hl.FillTransparency=0.35; hl.OutlineTransparency=0; hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop; hl.Parent=workspace
-                local bb=Instance.new("BillboardGui"); bb.Adornee=obj; bb.Size=UDim2.new(0,110,0,20)
-                bb.StudsOffset=Vector3.new(0,3,0); bb.AlwaysOnTop=true; bb.MaxDistance=120; bb.Parent=workspace
-                local lb3=Instance.new("TextLabel",bb); lb3.Size=UDim2.new(1,0,1,0); lb3.BackgroundTransparency=1
-                lb3.TextColor3=col; lb3.Font=Enum.Font.GothamBold; lb3.TextSize=12; lb3.Text=dn
-                lb3.TextStrokeTransparency=0; lb3.TextStrokeColor3=Color3.new(0,0,0)
-                dropESP2[obj]={hl=hl,bb=bb}
-            end
+    local function watchFolder(folder)
+        for _,obj in pairs(folder:GetChildren()) do
+            task.spawn(makeDropESP, obj)
         end
-        for obj,d in pairs(dropESP2) do
-            if not active[obj] or not obj.Parent then
-                pcall(function() d.hl:Destroy() end); pcall(function() if d.bb then d.bb:Destroy() end end); dropESP2[obj]=nil
+        folder.ChildAdded:Connect(function(obj)
+            task.spawn(makeDropESP, obj)
+        end)
+    end
+
+    local function watchGrab(grab)
+        -- Workspace.Grab.MaterialPart.*
+        local mpF=grab:FindFirstChild("MaterialPart")
+        if mpF then watchFolder(mpF) end
+        grab.ChildAdded:Connect(function(child)
+            if child.Name=="MaterialPart" then
+                watchFolder(child)
+            elseif child:IsA("BasePart") then
+                task.spawn(makeDropESP, child)
             end
+        end)
+        -- Filhos diretos do Grab
+        for _,o in pairs(grab:GetChildren()) do
+            if o:IsA("BasePart") then task.spawn(makeDropESP, o) end
         end
     end
 
-    dropConn2=true
-    task.spawn(function() while dropConn2 do pcall(refreshDrop); task.wait(0.5) end end)
+    -- Inicia agora se Grab ja existe, ou espera aparecer
+    local grabNow=workspace:FindFirstChild("Grab")
+    if grabNow then watchGrab(grabNow) end
+    workspace.ChildAdded:Connect(function(child)
+        if child.Name=="Grab" then watchGrab(child) end
+        -- fallback: MaterialPart direto no workspace
+        if child.Name=="MaterialPart" and child:IsA("BasePart") then
+            task.spawn(makeDropESP, child)
+        end
+    end)
+    -- fallback: MaterialParts ja no workspace
+    for _,o in pairs(workspace:GetChildren()) do
+        if o.Name=="MaterialPart" and o:IsA("BasePart") then
+            task.spawn(makeDropESP, o)
+        end
+    end
 
     local dtb=Instance.new("TextButton",espCtrl); dtb.Size=UDim2.new(0,120,0,22); dtb.Position=UDim2.new(0,4,0,32)
     dtb.BackgroundColor3=Color3.fromRGB(160,100,10); dtb.BorderSizePixel=0; dtb.Text="Drops ESP: ON"
     dtb.TextColor3=Color3.new(1,1,1); dtb.Font=Enum.Font.GothamBold; dtb.TextSize=9; dtb.ZIndex=13
     Instance.new("UICorner",dtb).CornerRadius=UDim.new(0,6)
     dtb.MouseButton1Click:Connect(function()
-        dropESPOn2=not dropESPOn2; dtb.Text=dropESPOn2 and "Drops ESP: ON" or "Drops ESP: OFF"
+        dropESPOn2=not dropESPOn2
+        dtb.Text=dropESPOn2 and "Drops ESP: ON" or "Drops ESP: OFF"
         dtb.BackgroundColor3=dropESPOn2 and Color3.fromRGB(160,100,10) or C.hk
+        if not dropESPOn2 then
+            for _,d in pairs(dropESP2) do
+                pcall(function() d.hl:Destroy() end)
+                pcall(function() if d.bb then d.bb:Destroy() end end)
+            end
+            dropESP2={}
+        end
     end)
     local dcl=Instance.new("TextLabel",espCtrl); dcl.Size=UDim2.new(0,190,0,22); dcl.Position=UDim2.new(0,128,0,32)
     dcl.BackgroundTransparency=1; dcl.Text="Drops: 0"; dcl.TextColor3=C.sub
     dcl.Font=Enum.Font.Gotham; dcl.TextSize=10; dcl.TextXAlignment=Enum.TextXAlignment.Left; dcl.ZIndex=12
     task.spawn(function()
-        while OreGui.Parent do task.wait(2); pcall(function() local n=0; for _ in pairs(dropESP2) do n=n+1 end; dcl.Text="Drops: "..n end) end
+        while OreGui.Parent do
+            task.wait(2)
+            pcall(function() local n=0; for _ in pairs(dropESP2) do n=n+1 end; dcl.Text="Drops: "..n end)
+        end
     end)
     espCtrl.Size=UDim2.new(1,-12,0,58)
     oreScroll.Size=UDim2.new(1,-12,1,-116); oreScroll.Position=UDim2.new(0,6,0,114)
