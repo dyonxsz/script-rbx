@@ -1,8 +1,8 @@
--- ╔══════════════════════════════════════════╗
--- ║      RefinaryTPDX - Teleport Menu        ║
--- ║        by dxtp | JJSploit Edition        ║
--- ║        Refinery Caves 2 Edition          ║
--- ╚══════════════════════════════════════════╝
+-- --==========================================
+-- --      RefinaryTPDX - Teleport Menu        --
+-- --        by dxtp | JJSploit Edition        --
+-- --        Refinery Caves 2 Edition          --
+-- --==========================================
 
 local Players          = game:GetService("Players")
 local RunService       = game:GetService("RunService")
@@ -11,11 +11,11 @@ local HttpService      = game:GetService("HttpService")
 local Lighting         = game:GetService("Lighting")
 local LP               = Players.LocalPlayer
 
--- ══════════════════════════════════
+-- ==================================
 --         SAVE / LOAD  (TPs)
--- ══════════════════════════════════
+-- ==================================
 local SAVE_FILE = "DXTP_" .. tostring(game.PlaceId) .. ".json"
-local HK_FILE   = "DXTP_hotkeys.json"   -- keybinds separadas (não dependem do jogo)
+local HK_FILE   = "DXTP_hotkeys.json"   -- keybinds separadas (n?o dependem do jogo)
 
 local function saveData(data)
     pcall(function() writefile(SAVE_FILE, HttpService:JSONEncode(data)) end)
@@ -35,7 +35,7 @@ local function loadData()
     return {perma={}, temp={}, favoritos={}, pastas={}}
 end
 
--- ── Keybinds persistentes ──────────────────
+-- ?? Keybinds persistentes ??????????????????
 -- salva: { slots=[{name,x,y,z},{...},...], keys=["KeyCode.Name",...] }
 local function saveHotkeys()
     local hkSave = {slots={}, keys={}, flyKey=nil}
@@ -59,9 +59,9 @@ end
 local tpData   = loadData()
 local hkData   = loadHotkeys()
 
--- ══════════════════════════════════
---         VARIÁVEIS GLOBAIS
--- ══════════════════════════════════
+-- ==================================
+--         VARI?VEIS GLOBAIS
+-- ==================================
 local tpMode        = "Direto"
 local minimized     = false
 -- slots: restaurados do arquivo
@@ -103,9 +103,9 @@ local searchQuery    = ""
 local pastaOpen      = {}   -- [nomePasta]=bool
 local pastaSelected  = nil  -- pasta para novo TP
 
--- ══════════════════════════════════
+-- ==================================
 --     RC2 CLOCK
--- ══════════════════════════════════
+-- ==================================
 local sessionStart      = tick()
 local RC2_DAY_REAL_SECS = 24 * 60
 
@@ -118,10 +118,10 @@ local function getRCTime()
     return string.format("%02d:%02d %s", h12, m, ampm), h
 end
 local function getTimeIcon(h)
-    if h >= 5  and h < 7  then return "🌅" end
-    if h >= 7  and h < 18 then return "☀"  end
-    if h >= 18 and h < 20 then return "🌇" end
-    return "🌙"
+    if h >= 5  and h < 7  then return "[S]" end
+    if h >= 7  and h < 18 then return "[D]"  end
+    if h >= 18 and h < 20 then return "[E]" end
+    return "[N]"
 end
 local function getTimeColor(h, C)
     if h >= 5 and h < 7   then return C.dawn
@@ -130,9 +130,9 @@ local function getTimeColor(h, C)
     else return C.night end
 end
 
--- ══════════════════════════════════
+-- ==================================
 --         HELPERS
--- ══════════════════════════════════
+-- ==================================
 local function getRoot()
     local c = LP.Character
     return c and c:FindFirstChild("HumanoidRootPart")
@@ -148,33 +148,33 @@ local function sortedEntries(tbl)
     return arr
 end
 
--- ══════════════════════════════════
---   TELEPORTE DE VEÍCULO (SEM MEXER ITENS)
--- ══════════════════════════════════
--- Encontra o modelo raiz do veículo que o jogador está pilotando.
+-- ==================================
+--   TELEPORTE DE VE?CULO (SEM MEXER ITENS)
+-- ==================================
+-- Encontra o modelo raiz do ve?culo que o jogador est? pilotando.
 -- Move o modelo inteiro usando SetPrimaryPartCFrame, preservando
--- o CFrame relativo de todas as peças (weld/motor6D mantém tudo no lugar).
+-- o CFrame relativo de todas as pe?as (weld/motor6D mant?m tudo no lugar).
 local function getVehicleModel()
     local char = LP.Character
     if not char then return nil end
-    -- verifica se está sentado em VehicleSeat
+    -- verifica se est? sentado em VehicleSeat
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum or hum.SeatPart == nil then return nil end
     local seat = hum.SeatPart
     if not seat:IsA("VehicleSeat") then return nil end
-    -- sobe até o modelo raiz do veículo
+    -- sobe at? o modelo raiz do ve?culo
     local model = seat:FindFirstAncestorOfClass("Model")
     return model
 end
 
--- Move veículo inteiro para targetPos mantendo orientação.
--- Usa a diferença de offset entre o HRP e o PrimaryPart do veículo
+-- Move ve?culo inteiro para targetPos mantendo orienta??o.
+-- Usa a diferen?a de offset entre o HRP e o PrimaryPart do ve?culo
 -- para que o JOGADOR chegue exatamente onde pediu.
 local function teleportVehicle(targetPos)
     local root  = getRoot()
     local vModel = getVehicleModel()
     if not vModel then
-        -- sem veículo: TP normal
+        -- sem ve?culo: TP normal
         return false
     end
     local pp = vModel.PrimaryPart
@@ -186,22 +186,22 @@ local function teleportVehicle(targetPos)
         if not pp then return false end
     end
 
-    -- Offset do PrimaryPart em relação ao HRP
+    -- Offset do PrimaryPart em rela??o ao HRP
     local offset = pp.CFrame:ToObjectSpace(root.CFrame)
-    -- Nova posição do PP: coloca o HRP em targetPos+3Y, ajusta o PP
+    -- Nova posi??o do PP: coloca o HRP em targetPos+3Y, ajusta o PP
     local newPPCFrame = CFrame.new(targetPos + Vector3.new(0,3,0)) * offset:Inverse()
 
     -- SetPrimaryPartCFrame move todo o modelo de uma vez
-    -- TODOS os weld/Motor6D são preservados → itens não caem
+    -- TODOS os weld/Motor6D s?o preservados ? itens n?o caem
     pcall(function()
         vModel:SetPrimaryPartCFrame(newPPCFrame)
     end)
     return true
 end
 
--- ══════════════════════════════════
+-- ==================================
 --        MODOS DE TELEPORTE
--- ══════════════════════════════════
+-- ==================================
 local function tpDireto(pos)
     local root = getRoot()
     if not root then return end
@@ -275,7 +275,7 @@ local function tpNoclip(pos)
 end
 
 local function doTp(pos)
-    -- Tenta teleportar veículo primeiro (se estiver pilotando)
+    -- Tenta teleportar ve?culo primeiro (se estiver pilotando)
     if teleportVehicle(pos) then return end
     if     tpMode=="Voar"   then task.spawn(tpVoar,   pos)
     elseif tpMode=="Andar"  then task.spawn(tpAndar,  pos)
@@ -283,9 +283,9 @@ local function doTp(pos)
     else                         task.spawn(tpDireto,  pos) end
 end
 
--- ══════════════════════════════════
+-- ==================================
 --              FLY
--- ══════════════════════════════════
+-- ==================================
 local function toggleFly()
     flyEnabled = not flyEnabled
     local root = getRoot(); local hum = getHum()
@@ -336,7 +336,7 @@ local function toggleFly()
     return flyEnabled
 end
 
--- FULLBRIGHT — cancela tweens do RC2 e mantém via RenderStepped
+-- FULLBRIGHT ? cancela tweens do RC2 e mant?m via RenderStepped
 do
     local origFogEnd2=Lighting.FogEnd; local origFogStart2=Lighting.FogStart
     local origShadows2=Lighting.GlobalShadows; local origOutdoor2=Lighting.OutdoorAmbient
@@ -420,9 +420,9 @@ do
     end
 end
 
--- ══════════════════════════════════
+-- ==================================
 --           WALKSPEED (loop fix)
--- ══════════════════════════════════
+-- ==================================
 local wsConn    = nil
 local currentWS = 16
 local function applyWalkSpeed(v)
@@ -434,9 +434,9 @@ local function applyWalkSpeed(v)
     end)
 end
 
--- ══════════════════════════════════
+-- ==================================
 --           QUICK TP
--- ══════════════════════════════════
+-- ==================================
 local function quickSave()
     local root=getRoot(); if not root then return end
     local pos=root.Position
@@ -456,9 +456,9 @@ local function quickGo()
     if quickLabels.update then quickLabels.update() end
 end
 
--- ══════════════════════════════════════════
+-- ==========================================
 --                  GUI
--- ══════════════════════════════════════════
+-- ==========================================
 if LP.PlayerGui:FindFirstChild("RefinaryTPDX") then
     LP.PlayerGui:FindFirstChild("RefinaryTPDX"):Destroy()
 end
@@ -491,7 +491,7 @@ local C = {
     veh    = Color3.fromRGB(0,  210,180),
 }
 
--- ─── Bolinha ───
+-- ??? Bolinha ???
 local Ball = Instance.new("TextButton",Gui)
 Ball.Size=UDim2.new(0,50,0,50); Ball.Position=UDim2.new(0,20,0.5,-25)
 Ball.BackgroundColor3=C.accent; Ball.BorderSizePixel=0
@@ -502,7 +502,7 @@ Instance.new("UICorner",Ball).CornerRadius=UDim.new(1,0)
 local ballGlow=Instance.new("UIStroke",Ball)
 ballGlow.Color=C.acc2; ballGlow.Thickness=2
 
--- ─── Janela ───
+-- ??? Janela ???
 local Win=Instance.new("Frame",Gui)
 Win.Size=UDim2.new(0,425,0,625); Win.Position=UDim2.new(0.5,-212,0.5,-312)
 Win.BackgroundColor3=C.bg; Win.BorderSizePixel=0; Win.ZIndex=10
@@ -510,7 +510,7 @@ Instance.new("UICorner",Win).CornerRadius=UDim.new(0,12)
 local winStroke=Instance.new("UIStroke",Win)
 winStroke.Color=C.border; winStroke.Thickness=1.5
 
--- ─── Header ───
+-- ??? Header ???
 local Hdr=Instance.new("Frame",Win)
 Hdr.Size=UDim2.new(1,0,0,46); Hdr.BackgroundColor3=C.panel
 Hdr.BorderSizePixel=0; Hdr.ZIndex=11
@@ -529,24 +529,24 @@ local function tlbl(par,text,x,y,w,h,font,sz,col,ax)
     l.ZIndex=13; return l
 end
 
-tlbl(Hdr,"⬡ RefinaryTPDX",14,3,180,20,Enum.Font.GothamBold,16,C.acc2)
-tlbl(Hdr,"AntiBan · RC2 · Fly Hotkey",14,24,200,13,Enum.Font.Gotham,9,C.sub)
-local clockLbl=tlbl(Hdr,"🌙 00:00 AM",155,3,150,20,Enum.Font.GothamBold,14,C.clock)
+tlbl(Hdr,"* RefinaryTPDX",14,3,180,20,Enum.Font.GothamBold,16,C.acc2)
+tlbl(Hdr,"AntiBan ? RC2 ? Fly Hotkey",14,24,200,13,Enum.Font.Gotham,9,C.sub)
+local clockLbl=tlbl(Hdr,"[N] 00:00 AM",155,3,150,20,Enum.Font.GothamBold,14,C.clock)
 local dateLbl =tlbl(Hdr,"Dia 1  Ano 1",155,24,150,13,Enum.Font.Gotham,9,C.sub)
 tlbl(Hdr,"[Home]",312,26,56,13,Enum.Font.Gotham,9,C.sub)
 
 local MinBtn=Instance.new("TextButton",Hdr)
 MinBtn.Size=UDim2.new(0,30,0,30); MinBtn.Position=UDim2.new(1,-38,0,8)
 MinBtn.BackgroundColor3=C.accent; MinBtn.BorderSizePixel=0
-MinBtn.Text="—"; MinBtn.TextColor3=Color3.new(1,1,1)
+MinBtn.Text="?"; MinBtn.TextColor3=Color3.new(1,1,1)
 MinBtn.Font=Enum.Font.GothamBold; MinBtn.TextSize=13; MinBtn.ZIndex=14
 Instance.new("UICorner",MinBtn).CornerRadius=UDim.new(0,7)
 
--- Botao FECHAR (X) — desativa tudo e apaga a GUI
+-- Botao FECHAR (X) ? desativa tudo e apaga a GUI
 local CloseBtn=Instance.new("TextButton",Hdr)
 CloseBtn.Size=UDim2.new(0,30,0,30); CloseBtn.Position=UDim2.new(1,-72,0,8)
 CloseBtn.BackgroundColor3=C.danger; CloseBtn.BorderSizePixel=0
-CloseBtn.Text="✕"; CloseBtn.TextColor3=Color3.new(1,1,1)
+CloseBtn.Text="X"; CloseBtn.TextColor3=Color3.new(1,1,1)
 CloseBtn.Font=Enum.Font.GothamBold; CloseBtn.TextSize=13; CloseBtn.ZIndex=14
 Instance.new("UICorner",CloseBtn).CornerRadius=UDim.new(0,7)
 CloseBtn.MouseButton1Click:Connect(function()
@@ -579,7 +579,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     Gui:Destroy()
 end)
 
--- ─── Scroll ───
+-- ??? Scroll ???
 local Scr=Instance.new("ScrollingFrame",Win)
 Scr.Size=UDim2.new(1,-8,1,-52); Scr.Position=UDim2.new(0,4,0,48)
 Scr.BackgroundTransparency=1; Scr.BorderSizePixel=0
@@ -611,13 +611,13 @@ local function mkBtn(par,text,x,y,w,h,col)
     return b
 end
 
--- ════════════════════════════════════
---  CARD 1: RC2 RELÓGIO
--- ════════════════════════════════════
+-- ====================================
+--  CARD 1: RC2 REL?GIO
+-- ====================================
 local clockCard=mkCard(65)
-tlbl(clockCard,"🕐  HORA DO SERVIDOR (Refinery Caves 2)",10,5,380,14,Enum.Font.GothamBold,11,C.acc2)
-local bigClock=tlbl(clockCard,"🌙 00:00 AM",10,22,200,22,Enum.Font.GothamBold,20,C.clock)
-local bigDate =tlbl(clockCard,"Dia 1  ·  Ano 1",10,46,200,14,Enum.Font.Gotham,10,C.sub)
+tlbl(clockCard,"[C]  HORA DO SERVIDOR (Refinery Caves 2)",10,5,380,14,Enum.Font.GothamBold,11,C.acc2)
+local bigClock=tlbl(clockCard,"[N] 00:00 AM",10,22,200,22,Enum.Font.GothamBold,20,C.clock)
+local bigDate =tlbl(clockCard,"Dia 1  ?  Ano 1",10,46,200,14,Enum.Font.Gotham,10,C.sub)
 
 local progressBg=Instance.new("Frame",clockCard)
 progressBg.Size=UDim2.new(0,182,0,8); progressBg.Position=UDim2.new(0,224,0,30)
@@ -628,9 +628,9 @@ progressFill.Size=UDim2.new(0,0,1,0); progressFill.BackgroundColor3=C.day
 progressFill.BorderSizePixel=0; progressFill.ZIndex=14
 Instance.new("UICorner",progressFill).CornerRadius=UDim.new(0,4)
 local progressLbl=tlbl(clockCard,"0%",224,40,182,12,Enum.Font.Gotham,9,C.sub,Enum.TextXAlignment.Center)
-tlbl(clockCard,"🌅",220,22,16,14,Enum.Font.Gotham,10,C.dawn,Enum.TextXAlignment.Center)
-tlbl(clockCard,"☀",296,22,16,14,Enum.Font.Gotham,10,C.day, Enum.TextXAlignment.Center)
-tlbl(clockCard,"🌙",392,22,16,14,Enum.Font.Gotham,10,C.night,Enum.TextXAlignment.Center)
+tlbl(clockCard,"[S]",220,22,16,14,Enum.Font.Gotham,10,C.dawn,Enum.TextXAlignment.Center)
+tlbl(clockCard,"[D]",296,22,16,14,Enum.Font.Gotham,10,C.day, Enum.TextXAlignment.Center)
+tlbl(clockCard,"[N]",392,22,16,14,Enum.Font.Gotham,10,C.night,Enum.TextXAlignment.Center)
 
 local function updateBigClock()
     local timeStr,h=getRCTime()
@@ -641,7 +641,7 @@ local function updateBigClock()
     local totalDays=math.floor(elapsed/RC2_DAY_REAL_SECS)
     local dayOfYear=(totalDays%365)+1
     local year=math.floor(totalDays/365)+1
-    bigDate.Text=string.format("Dia %d  ·  Ano %d",dayOfYear,year)
+    bigDate.Text=string.format("Dia %d  ?  Ano %d",dayOfYear,year)
     local pct=(Lighting.ClockTime%24)/24
     progressFill.Size=UDim2.new(pct,0,1,0); progressFill.BackgroundColor3=col
     progressLbl.Text=string.format("%.0f%%",pct*100)
@@ -649,11 +649,11 @@ local function updateBigClock()
     dateLbl.Text=string.format("Dia %d  Ano %d",dayOfYear,year)
 end
 
--- ════════════════════════════════════
+-- ====================================
 --  CARD 2: MODO DE TP
--- ════════════════════════════════════
+-- ====================================
 local modeCard=mkCard(80)
-tlbl(modeCard,"⚡  MODO DE TELEPORTE",10,6,300,16,Enum.Font.GothamBold,12,C.acc2)
+tlbl(modeCard,"!  MODO DE TELEPORTE",10,6,300,16,Enum.Font.GothamBold,12,C.acc2)
 local modeDescs={
     Direto ="Instantaneo com anti-kick por steps",
     Voar   ="Personagem voa suavemente ate o destino",
@@ -669,29 +669,29 @@ for i,m in ipairs({"Direto","Voar","Andar","Noclip"}) do
         tpMode=m
         for _,bb in pairs(modeBtns) do bb.BackgroundColor3=C.hk end
         b.BackgroundColor3=C.accent
-        modeDescL.Text="▸ "..modeDescs[m]
+        modeDescL.Text="> "..modeDescs[m]
     end)
 end
 modeBtns["Direto"].BackgroundColor3=C.accent
-modeDescL.Text="▸ "..modeDescs["Direto"]
+modeDescL.Text="> "..modeDescs["Direto"]
 
--- ════════════════════════════════════
+-- ====================================
 --  CARD 3: UTILIDADES
--- ════════════════════════════════════
+-- ====================================
 local utilCard=mkCard(142)
-tlbl(utilCard,"🛠  UTILIDADES",10,5,200,16,Enum.Font.GothamBold,12,C.acc2)
+tlbl(utilCard,"[U]  UTILIDADES",10,5,200,16,Enum.Font.GothamBold,12,C.acc2)
 
-local flyBtn=mkBtn(utilCard,"🚀 Fly: OFF",6,24,118,26,C.fly)
-local fbBtn =mkBtn(utilCard,"☀ Fullbright: OFF",130,24,166,26,C.hk)
+local flyBtn=mkBtn(utilCard,"[F] Fly: OFF",6,24,118,26,C.fly)
+local fbBtn =mkBtn(utilCard,"[D] Fullbright: OFF",130,24,166,26,C.hk)
 
 flyBtn.MouseButton1Click:Connect(function()
     local on=toggleFly()
-    flyBtn.Text=on and "🚀 Fly: ON" or "🚀 Fly: OFF"
+    flyBtn.Text=on and "[F] Fly: ON" or "[F] Fly: OFF"
     flyBtn.BackgroundColor3=on and C.acc2 or C.fly
 end)
 fbBtn.MouseButton1Click:Connect(function()
     local on=toggleFullbright()
-    fbBtn.Text=on and "☀ Fullbright: ON" or "☀ Fullbright: OFF"
+    fbBtn.Text=on and "[D] Fullbright: ON" or "[D] Fullbright: OFF"
     fbBtn.BackgroundColor3=on and C.fb or C.hk
 end)
 
@@ -704,7 +704,7 @@ flySpeedBox.Text="50"; flySpeedBox.TextColor3=C.text
 flySpeedBox.Font=Enum.Font.Gotham; flySpeedBox.TextSize=12
 flySpeedBox.ClearTextOnFocus=false; flySpeedBox.ZIndex=14
 Instance.new("UICorner",flySpeedBox).CornerRadius=UDim.new(0,5)
-local setFlyBtn=mkBtn(utilCard,"✔",114,56,28,22,C.spd)
+local setFlyBtn=mkBtn(utilCard,"OK",114,56,28,22,C.spd)
 setFlyBtn.TextSize=12
 setFlyBtn.MouseButton1Click:Connect(function()
     local v=tonumber(flySpeedBox.Text)
@@ -720,8 +720,8 @@ speedBox.Text="16"; speedBox.TextColor3=C.text
 speedBox.Font=Enum.Font.Gotham; speedBox.TextSize=12
 speedBox.ClearTextOnFocus=false; speedBox.ZIndex=14
 Instance.new("UICorner",speedBox).CornerRadius=UDim.new(0,5)
-local setSpeedBtn=mkBtn(utilCard,"✔",264,56,28,22,C.spd)
-local rstSpeedBtn=mkBtn(utilCard,"↺",296,56,28,22,C.hk)
+local setSpeedBtn=mkBtn(utilCard,"OK",264,56,28,22,C.spd)
+local rstSpeedBtn=mkBtn(utilCard,"<",296,56,28,22,C.hk)
 setSpeedBtn.TextSize=12; rstSpeedBtn.TextSize=12
 setSpeedBtn.MouseButton1Click:Connect(function()
     local v=tonumber(speedBox.Text)
@@ -736,7 +736,7 @@ local flyKeyLbl=tlbl(utilCard,
     82,86,130,16,Enum.Font.Gotham,11,C.acc2)
 local flyBindBtn=mkBtn(utilCard,"Bind Tecla",216,84,96,20,C.fly)
 flyBindBtn.TextSize=10
-local flyClearBtn=mkBtn(utilCard,"✕",316,84,28,20,C.danger)
+local flyClearBtn=mkBtn(utilCard,"X",316,84,28,20,C.danger)
 flyClearBtn.TextSize=10
 
 flyBindBtn.MouseButton1Click:Connect(function()
@@ -757,50 +757,50 @@ flyClearBtn.MouseButton1Click:Connect(function()
     saveHotkeys()
 end)
 
--- Veículo info
-local vehInfoLbl=tlbl(utilCard,"🚗 Veículo: não detectado",8,108,400,14,Enum.Font.Gotham,10,C.sub)
-tlbl(utilCard,"TP com veículo: automático ao teleportar se estiver num VehicleSeat",8,122,410,12,Enum.Font.Gotham,9,C.sub)
+-- Ve?culo info
+local vehInfoLbl=tlbl(utilCard,"[V] Ve?culo: n?o detectado",8,108,400,14,Enum.Font.Gotham,10,C.sub)
+tlbl(utilCard,"TP com ve?culo: autom?tico ao teleportar se estiver num VehicleSeat",8,122,410,12,Enum.Font.Gotham,9,C.sub)
 
--- atualiza status do veículo
+-- atualiza status do ve?culo
 task.spawn(function()
     while true do
         pcall(function()
             local vm=getVehicleModel()
             if vm then
-                vehInfoLbl.Text="🚗 Veículo: "..vm.Name.."  (TP automático ativo)"
+                vehInfoLbl.Text="[V] Ve?culo: "..vm.Name.."  (TP autom?tico ativo)"
                 vehInfoLbl.TextColor3=C.veh
             else
-                vehInfoLbl.Text="🚗 Veículo: não detectado"
+                vehInfoLbl.Text="[V] Ve?culo: n?o detectado"
                 vehInfoLbl.TextColor3=C.sub
             end
         end)
         task.wait(1)
     end
 end)
--- ════════════════════════════════════
+-- ====================================
 local quickCard=mkCard(84)
-tlbl(quickCard,"⚡  QUICK TP",10,4,200,16,Enum.Font.GothamBold,12,C.acc2)
-tlbl(quickCard,"[PageUp]=Salvar · [PageDown]=Ir/Ciclar · Máx:2 · PageUp c/2 apaga o + antigo",8,20,410,12,Enum.Font.Gotham,9,C.sub)
-local qLbl1  =tlbl(quickCard,"Ponto 1: —",  8,36,196,14,Enum.Font.Gotham,11,C.acc2)
-local qLbl2  =tlbl(quickCard,"Ponto 2: —",212,36,196,14,Enum.Font.Gotham,11,C.temp)
-local qIdxLbl=tlbl(quickCard,"Próximo: —",  8,52,200,14,Enum.Font.Gotham,10,C.sub)
-local qClearBtn=mkBtn(quickCard,"🗑 Limpar",312,50,88,22,C.danger)
+tlbl(quickCard,"!  QUICK TP",10,4,200,16,Enum.Font.GothamBold,12,C.acc2)
+tlbl(quickCard,"[PageUp]=Salvar ? [PageDown]=Ir/Ciclar ? M?x:2 ? PageUp c/2 apaga o + antigo",8,20,410,12,Enum.Font.Gotham,9,C.sub)
+local qLbl1  =tlbl(quickCard,"Ponto 1: ?",  8,36,196,14,Enum.Font.Gotham,11,C.acc2)
+local qLbl2  =tlbl(quickCard,"Ponto 2: ?",212,36,196,14,Enum.Font.Gotham,11,C.temp)
+local qIdxLbl=tlbl(quickCard,"Pr?ximo: ?",  8,52,200,14,Enum.Font.Gotham,10,C.sub)
+local qClearBtn=mkBtn(quickCard,"[X] Limpar",312,50,88,22,C.danger)
 qClearBtn.TextSize=10
 qClearBtn.MouseButton1Click:Connect(function()
     quickTps={}; quickIndex=1
     if quickLabels.update then quickLabels.update() end
 end)
 quickLabels.update=function()
-    qLbl1.Text=quickTps[1] and ("P1: "..math.floor(quickTps[1].x)..","..math.floor(quickTps[1].z)) or "Ponto 1: —"
-    qLbl2.Text=quickTps[2] and ("P2: "..math.floor(quickTps[2].x)..","..math.floor(quickTps[2].z)) or "Ponto 2: —"
-    qIdxLbl.Text=#quickTps>0 and ("Próximo: Ponto "..quickIndex) or "Próximo: —"
+    qLbl1.Text=quickTps[1] and ("P1: "..math.floor(quickTps[1].x)..","..math.floor(quickTps[1].z)) or "Ponto 1: ?"
+    qLbl2.Text=quickTps[2] and ("P2: "..math.floor(quickTps[2].x)..","..math.floor(quickTps[2].z)) or "Ponto 2: ?"
+    qIdxLbl.Text=#quickTps>0 and ("Pr?ximo: Ponto "..quickIndex) or "Pr?ximo: ?"
 end
 
--- ════════════════════════════════════
+-- ====================================
 --  CARD 6: CRIAR TP
--- ════════════════════════════════════
+-- ====================================
 local createCard=mkCard(112)
-tlbl(createCard,"➕  CRIAR TELEPORTE",10,5,300,16,Enum.Font.GothamBold,12,C.acc2)
+tlbl(createCard,"+  CRIAR TELEPORTE",10,5,300,16,Enum.Font.GothamBold,12,C.acc2)
 
 local nameBox=Instance.new("TextBox",createCard)
 nameBox.Size=UDim2.new(1,-14,0,26); nameBox.Position=UDim2.new(0,7,0,24)
@@ -811,23 +811,23 @@ nameBox.Font=Enum.Font.Gotham; nameBox.TextSize=12
 nameBox.ClearTextOnFocus=false; nameBox.ZIndex=14
 Instance.new("UICorner",nameBox).CornerRadius=UDim.new(0,6)
 
-local pastaDropLbl=tlbl(createCard,"📁 Pasta: Nenhuma",8,56,220,16,Enum.Font.Gotham,11,C.sub)
-local clearPastaSelBtn=mkBtn(createCard,"✕ Pasta",300,54,102,18,C.hk)
+local pastaDropLbl=tlbl(createCard,"[F] Pasta: Nenhuma",8,56,220,16,Enum.Font.Gotham,11,C.sub)
+local clearPastaSelBtn=mkBtn(createCard,"X Pasta",300,54,102,18,C.hk)
 clearPastaSelBtn.TextSize=10
 clearPastaSelBtn.MouseButton1Click:Connect(function()
     pastaSelected=nil
-    pastaDropLbl.Text="📁 Pasta: Nenhuma"; pastaDropLbl.TextColor3=C.sub
+    pastaDropLbl.Text="[F] Pasta: Nenhuma"; pastaDropLbl.TextColor3=C.sub
 end)
 
-local bPerma=mkBtn(createCard,"💾 Permanente",7,76,125,26,C.perma)
-local bTemp =mkBtn(createCard,"⏱ Temporario",138,76,116,26,C.temp)
+local bPerma=mkBtn(createCard,"[S] Permanente",7,76,125,26,C.perma)
+local bTemp =mkBtn(createCard,"[T] Temporario",138,76,116,26,C.temp)
 local statusL=tlbl(createCard,"",10,106,405,14,Enum.Font.Gotham,10,C.perma)
 
--- ════════════════════════════════════
+-- ====================================
 --  CARD 7: GERENCIAR PASTAS
--- ════════════════════════════════════
+-- ====================================
 local pastaMgmtCard=mkCard(130)
-tlbl(pastaMgmtCard,"📁  PASTAS",10,5,200,16,Enum.Font.GothamBold,12,C.acc2)
+tlbl(pastaMgmtCard,"[F]  PASTAS",10,5,200,16,Enum.Font.GothamBold,12,C.acc2)
 
 local pastaNameBox=Instance.new("TextBox",pastaMgmtCard)
 pastaNameBox.Size=UDim2.new(0,196,0,24); pastaNameBox.Position=UDim2.new(0,7,0,24)
@@ -838,7 +838,7 @@ pastaNameBox.Font=Enum.Font.Gotham; pastaNameBox.TextSize=12
 pastaNameBox.ClearTextOnFocus=false; pastaNameBox.ZIndex=14
 Instance.new("UICorner",pastaNameBox).CornerRadius=UDim.new(0,6)
 
-local criarPastaBtn=mkBtn(pastaMgmtCard,"➕ Criar Pasta",208,24,196,24,C.pasta)
+local criarPastaBtn=mkBtn(pastaMgmtCard,"+ Criar Pasta",208,24,196,24,C.pasta)
 
 local sep=Instance.new("Frame",pastaMgmtCard)
 sep.Size=UDim2.new(1,-14,0,1); sep.Position=UDim2.new(0,7,0,54)
@@ -854,11 +854,11 @@ local pastaDestBtn=mkBtn(pastaMgmtCard,"Selecionar Pasta...",208,76,196,22,C.hk)
 pastaDestBtn.TextSize=10
 local pastaDestSelected=nil
 
-local addToPastaBtn=mkBtn(pastaMgmtCard,"➕ Adicionar à Pasta",7,104,200,22,C.pasta)
+local addToPastaBtn=mkBtn(pastaMgmtCard,"+ Adicionar ? Pasta",7,104,200,22,C.pasta)
 addToPastaBtn.TextSize=10
 local pastaMsgL=tlbl(pastaMgmtCard,"",215,106,195,16,Enum.Font.Gotham,10,C.pasta)
 
--- ─── Popup flutuante ───
+-- ??? Popup flutuante ???
 local popupFrame=Instance.new("Frame",Gui)
 popupFrame.Size=UDim2.new(0,225,0,230); popupFrame.Position=UDim2.new(0.5,-112,0.5,-115)
 popupFrame.BackgroundColor3=C.panel; popupFrame.BorderSizePixel=0
@@ -877,7 +877,7 @@ popupTitle.ZIndex=301
 local popupClose=Instance.new("TextButton",popupFrame)
 popupClose.Size=UDim2.new(0,24,0,24); popupClose.Position=UDim2.new(1,-28,0,4)
 popupClose.BackgroundColor3=C.danger; popupClose.BorderSizePixel=0
-popupClose.Text="✕"; popupClose.TextColor3=Color3.new(1,1,1)
+popupClose.Text="X"; popupClose.TextColor3=Color3.new(1,1,1)
 popupClose.Font=Enum.Font.GothamBold; popupClose.TextSize=12; popupClose.ZIndex=302
 Instance.new("UICorner",popupClose).CornerRadius=UDim.new(0,6)
 popupClose.MouseButton1Click:Connect(function() popupFrame.Visible=false end)
@@ -923,7 +923,7 @@ tpDropBtn.MouseButton1Click:Connect(function()
     local all=sortedEntries(tpData.perma)
     for _,e in ipairs(sortedEntries(tpData.temp)) do table.insert(all,e) end
     local names={}; for _,e in ipairs(all) do table.insert(names,e.name) end
-    if #names==0 then pastaMsgL.Text="⚠ Nenhum TP criado!" pastaMsgL.TextColor3=C.danger return end
+    if #names==0 then pastaMsgL.Text="? Nenhum TP criado!" pastaMsgL.TextColor3=C.danger return end
     openPopup("Selecionar TP",names,function(name)
         tpDropSelected=name; tpDropBtn.Text=name; tpDropBtn.BackgroundColor3=C.accent
     end)
@@ -933,37 +933,37 @@ pastaDestBtn.MouseButton1Click:Connect(function()
     local names={}
     for nome in pairs(tpData.pastas) do table.insert(names,nome) end
     table.sort(names,function(a,b) return string.lower(a)<string.lower(b) end)
-    if #names==0 then pastaMsgL.Text="⚠ Nenhuma pasta!" pastaMsgL.TextColor3=C.danger return end
+    if #names==0 then pastaMsgL.Text="? Nenhuma pasta!" pastaMsgL.TextColor3=C.danger return end
     openPopup("Selecionar Pasta",names,function(nome)
         pastaDestSelected=nome; pastaDestBtn.Text=nome; pastaDestBtn.BackgroundColor3=C.pasta
     end)
 end)
 
 addToPastaBtn.MouseButton1Click:Connect(function()
-    if not tpDropSelected then pastaMsgL.Text="⚠ Selecione um TP!" pastaMsgL.TextColor3=C.danger return end
-    if not pastaDestSelected then pastaMsgL.Text="⚠ Selecione uma pasta!" pastaMsgL.TextColor3=C.danger return end
-    if not tpData.pastas[pastaDestSelected] then pastaMsgL.Text="⚠ Pasta nao existe!" pastaMsgL.TextColor3=C.danger return end
+    if not tpDropSelected then pastaMsgL.Text="? Selecione um TP!" pastaMsgL.TextColor3=C.danger return end
+    if not pastaDestSelected then pastaMsgL.Text="? Selecione uma pasta!" pastaMsgL.TextColor3=C.danger return end
+    if not tpData.pastas[pastaDestSelected] then pastaMsgL.Text="? Pasta nao existe!" pastaMsgL.TextColor3=C.danger return end
     tpData.pastas[pastaDestSelected][tpDropSelected]=true
     saveData(tpData)
-    pastaMsgL.Text="✔ Adicionado!"; pastaMsgL.TextColor3=C.perma
+    pastaMsgL.Text="OK Adicionado!"; pastaMsgL.TextColor3=C.perma
     reloadList()
 end)
 
 criarPastaBtn.MouseButton1Click:Connect(function()
     local nome=pastaNameBox.Text
-    if nome=="" then pastaMsgL.Text="⚠ Digite um nome!" pastaMsgL.TextColor3=C.danger return end
-    if tpData.pastas[nome] then pastaMsgL.Text="⚠ Ja existe!" pastaMsgL.TextColor3=C.danger return end
+    if nome=="" then pastaMsgL.Text="? Digite um nome!" pastaMsgL.TextColor3=C.danger return end
+    if tpData.pastas[nome] then pastaMsgL.Text="? Ja existe!" pastaMsgL.TextColor3=C.danger return end
     tpData.pastas[nome]={}; pastaOpen[nome]=true
     saveData(tpData); pastaNameBox.Text=""
-    pastaMsgL.Text="✔ Pasta criada: "..nome; pastaMsgL.TextColor3=C.pasta
+    pastaMsgL.Text="OK Pasta criada: "..nome; pastaMsgL.TextColor3=C.pasta
     reloadList()
 end)
 
--- ════════════════════════════════════
+-- ====================================
 --  BARRA DE PESQUISA
--- ════════════════════════════════════
+-- ====================================
 local searchCard=mkCard(40)
-tlbl(searchCard,"🔍",8,10,22,20,Enum.Font.Gotham,14,C.sub)
+tlbl(searchCard,"[S]",8,10,22,20,Enum.Font.Gotham,14,C.sub)
 local searchBox=Instance.new("TextBox",searchCard)
 searchBox.Size=UDim2.new(1,-38,0,26); searchBox.Position=UDim2.new(0,30,0,7)
 searchBox.BackgroundColor3=C.card; searchBox.BorderSizePixel=0
@@ -976,11 +976,11 @@ searchBox:GetPropertyChangedSignal("Text"):Connect(function()
     searchQuery=searchBox.Text; reloadList()
 end)
 
--- ════════════════════════════════════
---  SEÇÕES AUTO COLAPSÁVEIS (fav/perma/temp)
+-- ====================================
+--  SE??ES AUTO COLAPS?VEIS (fav/perma/temp)
 --  Clique no header para minimizar/expandir
--- ════════════════════════════════════
-local sectionOpen = {fav=true, perma=true, temp=true}  -- estado de cada seção
+-- ====================================
+local sectionOpen = {fav=true, perma=true, temp=true}  -- estado de cada se??o
 
 local function mkAutoSection(colorHdr, titleText, emoji, key)
     local sec=Instance.new("Frame",Scr)
@@ -994,7 +994,7 @@ local function mkAutoSection(colorHdr, titleText, emoji, key)
     pad.PaddingLeft=UDim.new(0,6); pad.PaddingRight=UDim.new(0,6)
     pad.PaddingTop=UDim.new(0,5);  pad.PaddingBottom=UDim.new(0,5)
 
-    -- Header clicável (toggle)
+    -- Header clic?vel (toggle)
     local hdrBtn=Instance.new("TextButton",sec)
     hdrBtn.Size=UDim2.new(1,0,0,22)
     hdrBtn.BackgroundTransparency=1
@@ -1005,7 +1005,7 @@ local function mkAutoSection(colorHdr, titleText, emoji, key)
     local togIcon=Instance.new("TextLabel",hdrBtn)
     togIcon.Size=UDim2.new(0,16,1,0); togIcon.Position=UDim2.new(0,0,0,0)
     togIcon.BackgroundTransparency=1
-    togIcon.Text=sectionOpen[key] and "▼" or "▶"
+    togIcon.Text=sectionOpen[key] and "v" or ">"
     togIcon.TextColor3=colorHdr; togIcon.Font=Enum.Font.GothamBold
     togIcon.TextSize=11; togIcon.ZIndex=14
 
@@ -1019,37 +1019,37 @@ local function mkAutoSection(colorHdr, titleText, emoji, key)
 
     hdrBtn.MouseButton1Click:Connect(function()
         sectionOpen[key]=not sectionOpen[key]
-        togIcon.Text=sectionOpen[key] and "▼" or "▶"
+        togIcon.Text=sectionOpen[key] and "v" or ">"
         reloadList()
     end)
 
     return sec, hdrBtn, togIcon
 end
 
-local favCard,  favHdrBtn,  favTog   = mkAutoSection(C.fav,  "FAVORITOS",   "⭐",  "fav")
-local permaCard,permaHdrBtn,permaTog = mkAutoSection(C.perma,"PERMANENTES", "📌", "perma")
-local tempCard, tempHdrBtn, tempTog  = mkAutoSection(C.temp, "TEMPORÁRIOS", "⏱", "temp")
+local favCard,  favHdrBtn,  favTog   = mkAutoSection(C.fav,  "FAVORITOS",   "*",  "fav")
+local permaCard,permaHdrBtn,permaTog = mkAutoSection(C.perma,"PERMANENTES", "[P]", "perma")
+local tempCard, tempHdrBtn, tempTog  = mkAutoSection(C.temp, "TEMPOR?RIOS", "[T]", "temp")
 
 -- alias para compatibilidade com reloadList que usa favHdr/permaHdr/tempHdr
 local favHdr   = favHdrBtn
 local permaHdr = permaHdrBtn
 local tempHdr  = tempHdrBtn
 
--- ════════════════════════════════════
+-- ====================================
 --  PASTAS CONTAINER
---  FIX: cada pasta é um Frame independente no Scr (não aninhado)
---  Isso elimina o problema de sobreposição e nomes sobrescrevendo
--- ════════════════════════════════════
--- As pastas serão inseridas diretamente no Scr como frames separados.
--- Guardamos referências para poder destruí-las no reload.
+--  FIX: cada pasta ? um Frame independente no Scr (n?o aninhado)
+--  Isso elimina o problema de sobreposi??o e nomes sobrescrevendo
+-- ====================================
+-- As pastas ser?o inseridas diretamente no Scr como frames separados.
+-- Guardamos refer?ncias para poder destru?-las no reload.
 local pastaFrames = {}  -- lista de Frames de pasta criados
 
--- ════════════════════════════════════
---  HOTKEYS (9 slots) – com save
--- ════════════════════════════════════
+-- ====================================
+--  HOTKEYS (9 slots) ? com save
+-- ====================================
 local hkCard=mkCard(10+9*21+30)
-tlbl(hkCard,"⌨  ATALHOS  (9 slots) — salvo permanentemente",10,5,400,16,Enum.Font.GothamBold,11,C.acc2)
-tlbl(hkCard,"Clique na linha do slot para selecioná-lo (azul = selecionado)",10,20,405,12,Enum.Font.Gotham,10,C.sub)
+tlbl(hkCard,"[K]  ATALHOS  (9 slots) ? salvo permanentemente",10,5,400,16,Enum.Font.GothamBold,11,C.acc2)
+tlbl(hkCard,"Clique na linha do slot para selecion?-lo (azul = selecionado)",10,20,405,12,Enum.Font.Gotham,10,C.sub)
 
 local slotHighlights={}
 local function updateSlotHighlight()
@@ -1077,7 +1077,7 @@ for i=1,9 do
     local tpL=Instance.new("TextLabel",row)
     tpL.Size=UDim2.new(0,138,1,0); tpL.Position=UDim2.new(0,18,0,0)
     tpL.BackgroundTransparency=1
-    tpL.Text=slotAssigned[i] and slotAssigned[i].name or "— vazio —"
+    tpL.Text=slotAssigned[i] and slotAssigned[i].name or "? vazio ?"
     tpL.TextColor3=slotAssigned[i] and C.text or C.sub
     tpL.Font=Enum.Font.Gotham; tpL.TextSize=11
     tpL.TextXAlignment=Enum.TextXAlignment.Left; tpL.ZIndex=14
@@ -1090,7 +1090,7 @@ for i=1,9 do
     keyL.Font=Enum.Font.Gotham; keyL.TextSize=10; keyL.ZIndex=14
 
     local bindB=mkBtn(row,"Bind",228,1,40,17,C.hk); bindB.TextSize=10
-    local clrB =mkBtn(row,"✕",272,1,26,17,C.danger); clrB.TextSize=10
+    local clrB =mkBtn(row,"X",272,1,26,17,C.danger); clrB.TextSize=10
 
     row.InputBegan:Connect(function(inp)
         if inp.UserInputType==Enum.UserInputType.MouseButton1 then
@@ -1116,16 +1116,16 @@ for i=1,9 do
 
     clrB.MouseButton1Click:Connect(function()
         slotAssigned[i]=nil; activeHotkeys[i]=nil
-        tpL.Text="— vazio —"; tpL.TextColor3=C.sub
+        tpL.Text="? vazio ?"; tpL.TextColor3=C.sub
         keyL.Text="Sem tecla"; keyL.TextColor3=C.sub
         saveHotkeys()
     end)
 end
 updateSlotHighlight()
 
--- ════════════════════════════════════
+-- ====================================
 --   CRIAR LINHA DE TP
--- ════════════════════════════════════
+-- ====================================
 local function mkRow(parent,entry,tipo,order)
     local row=Instance.new("Frame",parent)
     row.Size=UDim2.new(1,0,0,28); row.BackgroundColor3=C.card
@@ -1147,16 +1147,16 @@ local function mkRow(parent,entry,tipo,order)
     nL.Font=Enum.Font.Gotham; nL.TextSize=12
     nL.TextXAlignment=Enum.TextXAlignment.Left; nL.ZIndex=14
 
-    local goB  =mkBtn(row,"▶ IR", 152,3,42,22,C.accent)
-    local slotB=mkBtn(row,"→Slot",198,3,44,22,C.hk)
+    local goB  =mkBtn(row,"> IR", 152,3,42,22,C.accent)
+    local slotB=mkBtn(row,"?Slot",198,3,44,22,C.hk)
     local favB
     if tipo~="fav" then
         local isFav=tpData.favoritos[entry.name]~=nil
-        favB=mkBtn(row,isFav and "★" or "☆",246,3,22,22,isFav and C.fav or C.hk)
+        favB=mkBtn(row,isFav and "*" or "o",246,3,22,22,isFav and C.fav or C.hk)
         favB.TextSize=13
     end
     local delX=tipo~="fav" and 272 or 246
-    local delB=mkBtn(row,"🗑",delX,3,26,22,C.danger); delB.TextSize=12
+    local delB=mkBtn(row,"[X]",delX,3,26,22,C.danger); delB.TextSize=12
 
     goB.MouseButton1Click:Connect(function() doTp(Vector3.new(entry.x,entry.y,entry.z)) end)
 
@@ -1177,10 +1177,10 @@ local function mkRow(parent,entry,tipo,order)
         favB.MouseButton1Click:Connect(function()
             local already=tpData.favoritos[entry.name]~=nil
             if already then
-                tpData.favoritos[entry.name]=nil; favB.Text="☆"; favB.BackgroundColor3=C.hk
+                tpData.favoritos[entry.name]=nil; favB.Text="o"; favB.BackgroundColor3=C.hk
             else
                 tpData.favoritos[entry.name]={name=entry.name,x=entry.x,y=entry.y,z=entry.z}
-                favB.Text="★"; favB.BackgroundColor3=C.fav
+                favB.Text="*"; favB.BackgroundColor3=C.fav
             end
             saveData(tpData); reloadList()
         end)
@@ -1203,14 +1203,14 @@ local function mkRow(parent,entry,tipo,order)
     return row
 end
 
--- ════════════════════════════════════
+-- ====================================
 --   RELOAD LISTA
---   FIX PASTAS: cada pasta é um Frame independente no Scr,
---   com LayoutOrder sequencial após as seções fixas.
---   Isso elimina sobreposição e labels sobrescrevendo.
--- ════════════════════════════════════
+--   FIX PASTAS: cada pasta ? um Frame independente no Scr,
+--   com LayoutOrder sequencial ap?s as se??es fixas.
+--   Isso elimina sobreposi??o e labels sobrescrevendo.
+-- ====================================
 
--- LayoutOrder base para pastas (vem depois de todas as seções fixas)
+-- LayoutOrder base para pastas (vem depois de todas as se??es fixas)
 local PASTA_LO_BASE = 100
 
 function reloadList()
@@ -1219,21 +1219,21 @@ function reloadList()
     for _,c in pairs(permaCard:GetChildren()) do if c~=permaHdr and c:IsA("Frame") then c:Destroy() end end
     for _,c in pairs(tempCard:GetChildren())  do if c~=tempHdr  and c:IsA("Frame") then c:Destroy() end end
 
-    -- destrói todos os frames de pasta anteriores
+    -- destr?i todos os frames de pasta anteriores
     for _,f in ipairs(pastaFrames) do
         pcall(function() f:Destroy() end)
     end
     pastaFrames={}
 
-    -- atualiza ícones de toggle (caso sectionOpen tenha mudado externamente)
-    favTog.Text   = sectionOpen.fav   and "▼" or "▶"
-    permaTog.Text = sectionOpen.perma and "▼" or "▶"
-    tempTog.Text  = sectionOpen.temp  and "▼" or "▶"
+    -- atualiza ?cones de toggle (caso sectionOpen tenha mudado externamente)
+    favTog.Text   = sectionOpen.fav   and "v" or ">"
+    permaTog.Text = sectionOpen.perma and "v" or ">"
+    tempTog.Text  = sectionOpen.temp  and "v" or ">"
 
     local q=string.lower(searchQuery)
     local function match(name) return q=="" or string.find(string.lower(name),q,1,true) end
 
-    -- Favoritos (só popula rows se aberto)
+    -- Favoritos (s? popula rows se aberto)
     if sectionOpen.fav then
         for idx,e in ipairs(sortedEntries(tpData.favoritos)) do
             if match(e.name) then mkRow(favCard,e,"fav",idx) end
@@ -1245,7 +1245,7 @@ function reloadList()
             if match(e.name) then mkRow(permaCard,e,"perma",idx) end
         end
     end
-    -- Temporários
+    -- Tempor?rios
     if sectionOpen.temp then
         for idx,e in ipairs(sortedEntries(tpData.temp)) do
             if match(e.name) then mkRow(tempCard,e,"temp",idx) end
@@ -1283,17 +1283,17 @@ function reloadList()
         phRow.BorderSizePixel=0; phRow.ZIndex=13; phRow.LayoutOrder=0
         Instance.new("UICorner",phRow).CornerRadius=UDim.new(0,6)
 
-        -- ícone toggle
+        -- ?cone toggle
         local togL=Instance.new("TextLabel",phRow)
         togL.Size=UDim2.new(0,18,1,0); togL.Position=UDim2.new(0,4,0,0)
-        togL.BackgroundTransparency=1; togL.Text=isOpen and "▼" or "▶"
+        togL.BackgroundTransparency=1; togL.Text=isOpen and "v" or ">"
         togL.TextColor3=C.pasta; togL.Font=Enum.Font.GothamBold
         togL.TextSize=11; togL.ZIndex=14
 
         -- nome
         local pTitleL=Instance.new("TextLabel",phRow)
         pTitleL.Size=UDim2.new(0,200,1,0); pTitleL.Position=UDim2.new(0,22,0,0)
-        pTitleL.BackgroundTransparency=1; pTitleL.Text="📁 "..nomePasta
+        pTitleL.BackgroundTransparency=1; pTitleL.Text="[F] "..nomePasta
         pTitleL.TextColor3=C.pasta; pTitleL.Font=Enum.Font.GothamBold
         pTitleL.TextSize=12; pTitleL.TextXAlignment=Enum.TextXAlignment.Left
         pTitleL.ZIndex=14
@@ -1308,7 +1308,7 @@ function reloadList()
 
         local addBtn=mkBtn(phRow,"+ TP",258,2,46,20,C.hk); addBtn.TextSize=10
         local selBtn=mkBtn(phRow,"Usar",308,2,46,20,C.accent); selBtn.TextSize=10
-        local delPBtn=mkBtn(phRow,"🗑",358,2,26,20,C.danger); delPBtn.TextSize=11
+        local delPBtn=mkBtn(phRow,"[X]",358,2,26,20,C.danger); delPBtn.TextSize=11
 
         -- Toggle abrir/fechar
         local function togPasta()
@@ -1321,7 +1321,7 @@ function reloadList()
             if inp.UserInputType==Enum.UserInputType.MouseButton1 then togPasta() end
         end)
 
-        -- + TP: popup com TPs não incluídos
+        -- + TP: popup com TPs n?o inclu?dos
         addBtn.MouseButton1Click:Connect(function()
             local all=sortedEntries(tpData.perma)
             for _,e in ipairs(sortedEntries(tpData.temp)) do table.insert(all,e) end
@@ -1336,10 +1336,10 @@ function reloadList()
             end)
         end)
 
-        -- "Usar": seleciona esta pasta para o próximo TP criado
+        -- "Usar": seleciona esta pasta para o pr?ximo TP criado
         selBtn.MouseButton1Click:Connect(function()
             pastaSelected=nomePasta
-            pastaDropLbl.Text="📁 Pasta: "..nomePasta
+            pastaDropLbl.Text="[F] Pasta: "..nomePasta
             pastaDropLbl.TextColor3=C.pasta
         end)
 
@@ -1359,7 +1359,7 @@ function reloadList()
             table.sort(inPasta,function(a,b) return string.lower(a.name)<string.lower(b.name) end)
             for idx,e in ipairs(inPasta) do
                 if match(e.name) then
-                    -- FIX: LayoutOrder começa em 1 (não conflita com o header que é 0)
+                    -- FIX: LayoutOrder come?a em 1 (n?o conflita com o header que ? 0)
                     mkRow(pFrame,e,"pasta",idx)
                 end
             end
@@ -1368,24 +1368,24 @@ function reloadList()
 
     -- Atualiza label de pasta selecionada
     if pastaSelected then
-        pastaDropLbl.Text="📁 Pasta: "..pastaSelected
+        pastaDropLbl.Text="[F] Pasta: "..pastaSelected
         pastaDropLbl.TextColor3=C.pasta
     else
-        pastaDropLbl.Text="📁 Pasta: Nenhuma"
+        pastaDropLbl.Text="[F] Pasta: Nenhuma"
         pastaDropLbl.TextColor3=C.sub
     end
 end
 
 reloadList()
 
--- ════════════════════════════════════
+-- ====================================
 --   CRIAR TP
--- ════════════════════════════════════
+-- ====================================
 local function addTp(tipo)
     local name=nameBox.Text
-    if name=="" then statusL.Text="⚠ Digite um nome!" statusL.TextColor3=C.danger return end
+    if name=="" then statusL.Text="? Digite um nome!" statusL.TextColor3=C.danger return end
     local root=getRoot()
-    if not root then statusL.Text="⚠ Personagem nao encontrado!" statusL.TextColor3=C.danger return end
+    if not root then statusL.Text="? Personagem nao encontrado!" statusL.TextColor3=C.danger return end
     local p=root.Position
     local entry={name=name,x=p.X,y=p.Y,z=p.Z}
     if tipo=="perma" then tpData.perma[name]=entry else tpData.temp[name]=entry end
@@ -1393,16 +1393,16 @@ local function addTp(tipo)
         tpData.pastas[pastaSelected][name]=true
     end
     saveData(tpData)
-    statusL.Text="✔ Salvo: "..name; statusL.TextColor3=C.perma
+    statusL.Text="OK Salvo: "..name; statusL.TextColor3=C.perma
     nameBox.Text=""; reloadList()
 end
 
 bPerma.MouseButton1Click:Connect(function() addTp("perma") end)
 bTemp.MouseButton1Click:Connect(function()  addTp("temp")  end)
 
--- ════════════════════════════════════
+-- ====================================
 --   DRAG janela
--- ════════════════════════════════════
+-- ====================================
 do
     local drag,ds,sp=false
     Hdr.InputBegan:Connect(function(i)
@@ -1419,9 +1419,9 @@ do
     end)
 end
 
--- ════════════════════════════════════
+-- ====================================
 --   DRAG bolinha + abrir
--- ════════════════════════════════════
+-- ====================================
 do
     local drag,ds,sp=false; local clickOk=false
     Ball.InputBegan:Connect(function(i)
@@ -1445,16 +1445,16 @@ do
     end)
 end
 
--- ════════════════════════════════════
+-- ====================================
 --   MINIMIZAR
--- ════════════════════════════════════
+-- ====================================
 local function openMenu()  minimized=false Win.Visible=true  Ball.Visible=false end
 local function closeMenu() minimized=true  Win.Visible=false Ball.Visible=true  end
 MinBtn.MouseButton1Click:Connect(closeMenu)
 
--- ════════════════════════════════════
+-- ====================================
 --   INPUT GLOBAL
--- ════════════════════════════════════
+-- ====================================
 UserInputService.InputBegan:Connect(function(inp,gp)
     if gp then return end
     if inp.UserInputType~=Enum.UserInputType.Keyboard then return end
@@ -1466,7 +1466,7 @@ UserInputService.InputBegan:Connect(function(inp,gp)
     -- Fly hotkey
     if flyHotkey and inp.KeyCode==flyHotkey then
         local on=toggleFly()
-        flyBtn.Text=on and "🚀 Fly: ON" or "🚀 Fly: OFF"
+        flyBtn.Text=on and "[F] Fly: ON" or "[F] Fly: OFF"
         flyBtn.BackgroundColor3=on and C.acc2 or C.fly
         return
     end
@@ -1478,9 +1478,9 @@ UserInputService.InputBegan:Connect(function(inp,gp)
     end
 end)
 
--- ════════════════════════════════════
+-- ====================================
 --   CLOCK LOOP
--- ════════════════════════════════════
+-- ====================================
 task.spawn(function()
     while true do
         pcall(updateBigClock)
@@ -1488,16 +1488,16 @@ task.spawn(function()
     end
 end)
 
-print("✔ RefinaryTPDX carregado | PlaceId: "..tostring(game.PlaceId))
+print("OK RefinaryTPDX carregado | PlaceId: "..tostring(game.PlaceId))
 
--- ╔══════════════════════════════════════════════════════╗
--- ║   MÓDULO: MINERIOS — ESP + TP                        ║
--- ║   Aba separada, abre/fecha com [Insert]              ║
--- ╚══════════════════════════════════════════════════════╝
+-- --======================================================
+-- --   M?DULO: MINERIOS ? ESP + TP                        --
+-- --   Aba separada, abre/fecha com [Insert]              --
+-- --======================================================
 
--- ══════════════════════════════════
+-- ==================================
 --  DADOS DOS MINERIOS (confirmados pelos scans)
--- ══════════════════════════════════
+-- ==================================
 local ORE_DATA = {
     -- Zona Spawn (scan 1)
     {name="Stone",      color=Color3.fromRGB(130,130,110), tier=1},
@@ -1509,7 +1509,7 @@ local ORE_DATA = {
     {name="Amber",      color=Color3.fromRGB(230,170,30),  tier=2},
     {name="Cobalt",     color=Color3.fromRGB(60,110,230),  tier=3},
     {name="Sulfur",     color=Color3.fromRGB(220,220,40),  tier=3},
-    -- Zona Vulcânica (scan 2)
+    -- Zona Vulc?nica (scan 2)
     {name="Magma",      color=Color3.fromRGB(255,80,20),   tier=3},
     {name="Obsidian",   color=Color3.fromRGB(80,20,120),   tier=4},
     {name="Cloudnite",  color=Color3.fromRGB(180,220,255), tier=4},
@@ -1517,13 +1517,13 @@ local ORE_DATA = {
     {name="Volcanium",  color=Color3.fromRGB(255,40,40),   tier=5},
 }
 
--- Quais minérios estão ativos para ESP/TP
+-- Quais min?rios est?o ativos para ESP/TP
 local oreActive = {}
 for _, od in ipairs(ORE_DATA) do oreActive[od.name] = true end
 
--- ══════════════════════════════════
+-- ==================================
 --  ESP STATE
--- ══════════════════════════════════
+-- ==================================
 local oreESP       = {}   -- [model] = {hl=Highlight, bb=BillboardGui}
 local oreESPOn     = true
 local oreESPConn   = nil
@@ -1571,7 +1571,7 @@ local function refreshOreESP()
                     hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                     hl.Parent = workspace
 
-                    -- Label com nome e distância
+                    -- Label com nome e dist?ncia
                     local pp = ore.PrimaryPart or ore:FindFirstChildOfClass("BasePart")
                     local bb
                     if pp then
@@ -1599,7 +1599,7 @@ local function refreshOreESP()
         end
     end
 
-    -- Remove ESP de minérios que sumiram
+    -- Remove ESP de min?rios que sumiram
     for m, data in pairs(oreESP) do
         if not active[m] or not m.Parent then
             pcall(function() data.hl:Destroy() end)
@@ -1632,9 +1632,9 @@ end
 
 startOreESPLoop()
 
--- ══════════════════════════════════
---  TP PARA MINÉRIO
--- ══════════════════════════════════
+-- ==================================
+--  TP PARA MIN?RIO
+-- ==================================
 local function tpToNearestOre(oreName)
     local folder = getOresFolder2()
     if not folder then return end
@@ -1656,14 +1656,14 @@ local function tpToNearestOre(oreName)
     end
 end
 
--- ══════════════════════════════════
+-- ==================================
 --  GUI DA ABA DE MINERIOS
--- ══════════════════════════════════
+-- ==================================
 local oreWinVisible = false
 
 local OreGui = Instance.new("Frame", Gui)
 OreGui.Size = UDim2.new(0,340,0,580)
-OreGui.Position = UDim2.new(0.5,220,0.5,-290)  -- à direita do menu principal
+OreGui.Position = UDim2.new(0.5,220,0.5,-290)  -- ? direita do menu principal
 OreGui.BackgroundColor3 = C.bg
 OreGui.BorderSizePixel = 0
 OreGui.ZIndex = 10
@@ -1685,7 +1685,7 @@ ohFix.BackgroundColor3 = C.panel; ohFix.BorderSizePixel = 0; ohFix.ZIndex = 11
 local oreTitleL = Instance.new("TextLabel", OreHdr)
 oreTitleL.Size = UDim2.new(1,-50,1,0); oreTitleL.Position = UDim2.new(0,12,0,0)
 oreTitleL.BackgroundTransparency = 1
-oreTitleL.Text = "⛏  Minerios — ESP + TP"
+oreTitleL.Text = "[M]  Minerios ? ESP + TP"
 oreTitleL.TextColor3 = C.acc2; oreTitleL.Font = Enum.Font.GothamBold
 oreTitleL.TextSize = 14; oreTitleL.TextXAlignment = Enum.TextXAlignment.Left
 oreTitleL.ZIndex = 12
@@ -1693,7 +1693,7 @@ oreTitleL.ZIndex = 12
 local oreCloseBtn = Instance.new("TextButton", OreHdr)
 oreCloseBtn.Size = UDim2.new(0,28,0,28); oreCloseBtn.Position = UDim2.new(1,-36,0,8)
 oreCloseBtn.BackgroundColor3 = C.danger; oreCloseBtn.BorderSizePixel = 0
-oreCloseBtn.Text = "✕"; oreCloseBtn.TextColor3 = Color3.new(1,1,1)
+oreCloseBtn.Text = "X"; oreCloseBtn.TextColor3 = Color3.new(1,1,1)
 oreCloseBtn.Font = Enum.Font.GothamBold; oreCloseBtn.TextSize = 13; oreCloseBtn.ZIndex = 14
 Instance.new("UICorner", oreCloseBtn).CornerRadius = UDim.new(0,7)
 oreCloseBtn.MouseButton1Click:Connect(function()
@@ -1714,7 +1714,7 @@ espTogBtn.Size = UDim2.new(0,130,0,24)
 espTogBtn.Position = UDim2.new(0,4,0,4)
 espTogBtn.BackgroundColor3 = C.accent
 espTogBtn.BorderSizePixel = 0
-espTogBtn.Text = "👁 ESP: ON"
+espTogBtn.Text = "[E] ESP: ON"
 espTogBtn.TextColor3 = Color3.new(1,1,1)
 espTogBtn.Font = Enum.Font.GothamBold; espTogBtn.TextSize = 11; espTogBtn.ZIndex = 13
 Instance.new("UICorner", espTogBtn).CornerRadius = UDim.new(0,6)
@@ -1723,14 +1723,14 @@ local oreCountLbl = Instance.new("TextLabel", espCtrl)
 oreCountLbl.Size = UDim2.new(0,180,1,0)
 oreCountLbl.Position = UDim2.new(0,140,0,0)
 oreCountLbl.BackgroundTransparency = 1
-oreCountLbl.Text = "Visíveis: 0"
+oreCountLbl.Text = "Vis?veis: 0"
 oreCountLbl.TextColor3 = C.sub; oreCountLbl.Font = Enum.Font.Gotham
 oreCountLbl.TextSize = 11; oreCountLbl.TextXAlignment = Enum.TextXAlignment.Left
 oreCountLbl.ZIndex = 12
 
 espTogBtn.MouseButton1Click:Connect(function()
     oreESPOn = not oreESPOn
-    espTogBtn.Text = oreESPOn and "👁 ESP: ON" or "👁 ESP: OFF"
+    espTogBtn.Text = oreESPOn and "[E] ESP: ON" or "[E] ESP: OFF"
     espTogBtn.BackgroundColor3 = oreESPOn and C.accent or C.hk
     if not oreESPOn then stopOreESPLoop()
     else startOreESPLoop() end
@@ -1746,7 +1746,7 @@ insLbl.TextColor3 = C.sub; insLbl.Font = Enum.Font.Gotham
 insLbl.TextSize = 10; insLbl.TextXAlignment = Enum.TextXAlignment.Right
 insLbl.ZIndex = 12
 
--- Scroll com botões de cada minério
+-- Scroll com bot?es de cada min?rio
 local oreScroll = Instance.new("ScrollingFrame", OreGui)
 oreScroll.Size = UDim2.new(1,-12,1,-90)
 oreScroll.Position = UDim2.new(0,6,0,88)
@@ -1767,8 +1767,8 @@ orePad.PaddingLeft = UDim.new(0,2); orePad.PaddingRight = UDim.new(0,2)
 orePad.PaddingTop = UDim.new(0,4)
 
 -- Tier labels
-local tierNames = {[1]="Tier 1 — Comum", [2]="Tier 2 — Incomum",
-    [3]="Tier 3 — Raro", [4]="Tier 4 — Épico", [5]="Tier 5 — Lendário"}
+local tierNames = {[1]="Tier 1 ? Comum", [2]="Tier 2 ? Incomum",
+    [3]="Tier 3 ? Raro", [4]="Tier 4 ? ?pico", [5]="Tier 5 ? Lend?rio"}
 local tierColors = {
     [1]=Color3.fromRGB(160,160,160), [2]=Color3.fromRGB(80,200,80),
     [3]=Color3.fromRGB(80,120,255),  [4]=Color3.fromRGB(180,80,255),
@@ -1797,7 +1797,7 @@ for _, od in ipairs(ORE_DATA) do
         sepLbl.TextXAlignment = Enum.TextXAlignment.Left; sepLbl.ZIndex = 13
     end
 
-    -- Row do minério
+    -- Row do min?rio
     rowOrder = rowOrder + 1
     local row = Instance.new("Frame", oreScroll)
     row.Size = UDim2.new(1,0,0,30)
@@ -1811,12 +1811,12 @@ for _, od in ipairs(ORE_DATA) do
     bar.BackgroundColor3 = od.color; bar.BorderSizePixel = 0; bar.ZIndex = 13
     Instance.new("UICorner", bar).CornerRadius = UDim.new(0,3)
 
-    -- Toggle ESP deste minério
+    -- Toggle ESP deste min?rio
     local espDot = Instance.new("TextButton", row)
     espDot.Size = UDim2.new(0,22,0,22); espDot.Position = UDim2.new(0,8,0,4)
     espDot.BackgroundColor3 = oreActive[od.name] and od.color or C.card
     espDot.BorderSizePixel = 0
-    espDot.Text = oreActive[od.name] and "●" or "○"
+    espDot.Text = oreActive[od.name] and "o" or "o"
     espDot.TextColor3 = Color3.new(1,1,1)
     espDot.Font = Enum.Font.GothamBold; espDot.TextSize = 14; espDot.ZIndex = 14
     Instance.new("UICorner", espDot).CornerRadius = UDim.new(1,0)
@@ -1830,7 +1830,7 @@ for _, od in ipairs(ORE_DATA) do
     nameLbl.Font = Enum.Font.GothamBold; nameLbl.TextSize = 12
     nameLbl.TextXAlignment = Enum.TextXAlignment.Left; nameLbl.ZIndex = 13
 
-    -- Quantidade visível
+    -- Quantidade vis?vel
     local qtyLbl = Instance.new("TextLabel", row)
     qtyLbl.Size = UDim2.new(0,50,1,0); qtyLbl.Position = UDim2.new(0,158,0,0)
     qtyLbl.BackgroundTransparency = 1
@@ -1839,11 +1839,11 @@ for _, od in ipairs(ORE_DATA) do
     qtyLbl.Font = Enum.Font.Gotham; qtyLbl.TextSize = 10
     qtyLbl.TextXAlignment = Enum.TextXAlignment.Left; qtyLbl.ZIndex = 13
 
-    -- Botão TP (vai para o mais próximo deste tipo)
+    -- Bot?o TP (vai para o mais pr?ximo deste tipo)
     local tpBtn = Instance.new("TextButton", row)
     tpBtn.Size = UDim2.new(0,70,0,22); tpBtn.Position = UDim2.new(0,210,0,4)
     tpBtn.BackgroundColor3 = C.accent; tpBtn.BorderSizePixel = 0
-    tpBtn.Text = "▶ TP"
+    tpBtn.Text = "> TP"
     tpBtn.TextColor3 = Color3.new(1,1,1)
     tpBtn.Font = Enum.Font.GothamBold; tpBtn.TextSize = 11; tpBtn.ZIndex = 14
     Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(0,6)
@@ -1854,10 +1854,10 @@ for _, od in ipairs(ORE_DATA) do
     espDot.MouseButton1Click:Connect(function()
         oreActive[oreNameCapture] = not oreActive[oreNameCapture]
         if oreActive[oreNameCapture] then
-            espDot.Text = "●"; espDot.BackgroundColor3 = oreColorCapture
+            espDot.Text = "o"; espDot.BackgroundColor3 = oreColorCapture
         else
-            espDot.Text = "○"; espDot.BackgroundColor3 = C.card
-            -- Remove ESP deste minério imediatamente
+            espDot.Text = "o"; espDot.BackgroundColor3 = C.card
+            -- Remove ESP deste min?rio imediatamente
             for m, data in pairs(oreESP) do
                 if m.Name == oreNameCapture then
                     pcall(function() data.hl:Destroy() end)
@@ -1868,16 +1868,16 @@ for _, od in ipairs(ORE_DATA) do
         end
     end)
 
-    -- TP para o mais próximo deste tipo
+    -- TP para o mais pr?ximo deste tipo
     tpBtn.MouseButton1Click:Connect(function()
         tpToNearestOre(oreNameCapture)
     end)
 
-    -- Guarda ref do qtyLbl para atualização
+    -- Guarda ref do qtyLbl para atualiza??o
     od._qtyLbl = qtyLbl
 end
 
--- Atualiza contadores de quantidade visível
+-- Atualiza contadores de quantidade vis?vel
 task.spawn(function()
     while OreGui.Parent do
         pcall(function()
@@ -1898,7 +1898,7 @@ task.spawn(function()
                     od._qtyLbl.TextColor3 = n > 0 and C.green or C.sub
                 end
             end
-            -- Total visível no ESP
+            -- Total vis?vel no ESP
             local espCount = 0
             for _ in pairs(oreESP) do espCount = espCount + 1 end
             oreCountLbl.Text = "ESP: "..espCount.." vis"
@@ -2056,17 +2056,17 @@ do
         local bar=Instance.new("Frame",row); bar.Size=UDim2.new(0,4,0.8,0); bar.Position=UDim2.new(0,0,0.1,0)
         bar.BackgroundColor3=od.color; bar.BorderSizePixel=0; bar.ZIndex=13; Instance.new("UICorner",bar).CornerRadius=UDim.new(0,3)
         local dot=Instance.new("TextButton",row); dot.Size=UDim2.new(0,22,0,22); dot.Position=UDim2.new(0,8,0,4)
-        dot.BackgroundColor3=od.color; dot.BorderSizePixel=0; dot.Text="●"; dot.TextColor3=Color3.new(1,1,1)
+        dot.BackgroundColor3=od.color; dot.BorderSizePixel=0; dot.Text="o"; dot.TextColor3=Color3.new(1,1,1)
         dot.Font=Enum.Font.GothamBold; dot.TextSize=14; dot.ZIndex=14; Instance.new("UICorner",dot).CornerRadius=UDim.new(1,0)
         local nL=Instance.new("TextLabel",row); nL.Size=UDim2.new(0,120,1,0); nL.Position=UDim2.new(0,34,0,0)
         nL.BackgroundTransparency=1; nL.Text=od.name; nL.TextColor3=od.color
         nL.Font=Enum.Font.GothamBold; nL.TextSize=12; nL.TextXAlignment=Enum.TextXAlignment.Left; nL.ZIndex=13
         local tpB=Instance.new("TextButton",row); tpB.Size=UDim2.new(0,70,0,22); tpB.Position=UDim2.new(0,210,0,4)
-        tpB.BackgroundColor3=C.accent; tpB.BorderSizePixel=0; tpB.Text="▶ TP"; tpB.TextColor3=Color3.new(1,1,1)
+        tpB.BackgroundColor3=C.accent; tpB.BorderSizePixel=0; tpB.Text="> TP"; tpB.TextColor3=Color3.new(1,1,1)
         tpB.Font=Enum.Font.GothamBold; tpB.TextSize=11; tpB.ZIndex=14; Instance.new("UICorner",tpB).CornerRadius=UDim.new(0,6)
         local capN=od.name
         dot.MouseButton1Click:Connect(function()
-            oreActive[capN]=not oreActive[capN]; dot.Text=oreActive[capN] and "●" or "○"
+            oreActive[capN]=not oreActive[capN]; dot.Text=oreActive[capN] and "o" or "o"
             dot.BackgroundColor3=oreActive[capN] and od.color or C.card
         end)
         tpB.MouseButton1Click:Connect(function() tpToNearestOre(capN) end)
@@ -2158,7 +2158,7 @@ do
     end)
 end
 
--- ── Tecla [Insert] abre/fecha aba de minerios ──
+-- ?? Tecla [Insert] abre/fecha aba de minerios ??
 UserInputService.InputBegan:Connect(function(inp,gp)
     if gp then return end
     if inp.KeyCode == Enum.KeyCode.Insert then
@@ -2167,13 +2167,13 @@ UserInputService.InputBegan:Connect(function(inp,gp)
     end
 end)
 
--- ── Botão no header do menu principal para abrir aba de minerios ──
+-- ?? Bot?o no header do menu principal para abrir aba de minerios ??
 local oreTabBtn = Instance.new("TextButton", Hdr)
 oreTabBtn.Size = UDim2.new(0,28,0,28)
-oreTabBtn.Position = UDim2.new(1,-70,0,8)  -- à esquerda do botão minimizar
+oreTabBtn.Position = UDim2.new(1,-70,0,8)  -- ? esquerda do bot?o minimizar
 oreTabBtn.BackgroundColor3 = Color3.fromRGB(80,140,60)
 oreTabBtn.BorderSizePixel = 0
-oreTabBtn.Text = "⛏"
+oreTabBtn.Text = "[M]"
 oreTabBtn.TextColor3 = Color3.new(1,1,1)
 oreTabBtn.Font = Enum.Font.GothamBold; oreTabBtn.TextSize = 14; oreTabBtn.ZIndex = 14
 Instance.new("UICorner", oreTabBtn).CornerRadius = UDim.new(0,7)
@@ -2182,4 +2182,4 @@ oreTabBtn.MouseButton1Click:Connect(function()
     OreGui.Visible = oreWinVisible
 end)
 
-print("✔ Modulo Minerios carregado | Insert = abre/fecha | ⛏ no header")
+print("OK Modulo Minerios carregado | Insert = abre/fecha | [M] no header")
