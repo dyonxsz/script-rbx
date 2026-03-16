@@ -1553,42 +1553,42 @@ local function refreshDropESP()
         return
     end
     local active = {}
-    -- Confirmado pelo spy: MaterialParts ficam em Workspace.Grab.MaterialPart
-    local grabF = workspace:FindFirstChild("Grab")
-    if not grabF then return end
-    local mpF = grabF:FindFirstChild("MaterialPart") or grabF
-
-    for _, obj in pairs(mpF:GetChildren()) do
-        if obj:IsA("BasePart") then
+    -- MaterialPart aparece direto no workspace (filho imediato) após quebrar pedra
+    for _, obj in pairs(workspace:GetChildren()) do
+        if obj.Name == "MaterialPart" and obj:IsA("BasePart") then
             active[obj] = true
             if not dropESP[obj] then
-                -- Tenta ler nome do item
-                local dropName = "Item"
-                for _, ch in pairs(obj:GetChildren()) do
-                    if ch:IsA("StringValue") then
-                        dropName = ch.Value ~= "" and ch.Value or ch.Name; break
+                -- Tenta ler nome do item dentro do MaterialPart
+                local dropName = "Minerio"
+                for _, child in pairs(obj:GetChildren()) do
+                    if child:IsA("StringValue") then
+                        dropName = child.Value ~= "" and child.Value or child.Name
+                        break
                     end
-                    if ch:IsA("BillboardGui") then
-                        local tl = ch:FindFirstChildOfClass("TextLabel")
+                    if child:IsA("BillboardGui") then
+                        -- O jogo pode já colocar um BillboardGui com o nome
+                        local tl = child:FindFirstChildOfClass("TextLabel")
                         if tl and tl.Text ~= "" then dropName = tl.Text; break end
                     end
                 end
-                if dropName == "Item" then dropName = mpF.Name end
 
-                -- Cor baseada no drop
+                -- Cor baseada no nome do drop
                 local col = Color3.fromRGB(255,200,60)
                 for _, od in ipairs(ORE_DATA) do
-                    local low = string.lower(dropName)
-                    if low:find(string.lower(od.name),1,true)
-                    or (od.drop and low:find(string.lower(od.drop),1,true)) then
+                    local dropLow = string.lower(od.drop or "")
+                    local nameLow = string.lower(od.name)
+                    local itemLow = string.lower(dropName)
+                    if itemLow:find(nameLow,1,true) or (dropLow~="" and itemLow:find(dropLow,1,true)) then
                         col = od.color; break
                     end
                 end
 
                 local hl = Instance.new("Highlight")
                 hl.Adornee = obj
-                hl.FillColor = col; hl.OutlineColor = col
-                hl.FillTransparency = 0.35; hl.OutlineTransparency = 0
+                hl.FillColor = col
+                hl.OutlineColor = col
+                hl.FillTransparency = 0.35
+                hl.OutlineTransparency = 0
                 hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                 hl.Parent = workspace
 
@@ -1596,13 +1596,15 @@ local function refreshDropESP()
                 bb.Adornee = obj
                 bb.Size = UDim2.new(0,110,0,20)
                 bb.StudsOffset = Vector3.new(0,3,0)
-                bb.AlwaysOnTop = true; bb.MaxDistance = 120
+                bb.AlwaysOnTop = true
+                bb.MaxDistance = 120
                 bb.Parent = workspace
                 local lbl3 = Instance.new("TextLabel", bb)
                 lbl3.Size = UDim2.new(1,0,1,0)
                 lbl3.BackgroundTransparency = 1
                 lbl3.TextColor3 = col
-                lbl3.Font = Enum.Font.GothamBold; lbl3.TextSize = 12
+                lbl3.Font = Enum.Font.GothamBold
+                lbl3.TextSize = 12
                 lbl3.Text = dropName
                 lbl3.TextStrokeTransparency = 0
                 lbl3.TextStrokeColor3 = Color3.new(0,0,0)
