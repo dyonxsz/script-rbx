@@ -115,12 +115,50 @@ local function makeLabel(parent, text, size, pos, color, fontSize, font, align)
     return l
 end
 
-makeLabel(Header, "💀 TROLL.EXE  v4",
-    UDim2.new(1,-60,1,0), UDim2.new(0,14,0,0),
+makeLabel(Header, "💀 TROLL.EXE",
+    UDim2.new(1,-90,1,0), UDim2.new(0,14,0,0),
     Color3.fromRGB(220,0,60), 16)
 makeLabel(Header, "MOD MENU  •  JJSPLOIT",
-    UDim2.new(1,-60,0,14), UDim2.new(0,14,0,28),
+    UDim2.new(1,-90,0,14), UDim2.new(0,14,0,28),
     Color3.fromRGB(80,40,80), 9, Enum.Font.Code)
+
+-- Botão minimizar
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size             = UDim2.new(0,28,0,28)
+MinBtn.Position         = UDim2.new(1,-68,0.5,-14)
+MinBtn.BackgroundColor3 = Color3.fromRGB(10,20,30)
+MinBtn.Text             = "—"
+MinBtn.TextColor3       = Color3.fromRGB(0,180,255)
+MinBtn.TextSize         = 16
+MinBtn.Font             = Enum.Font.GothamBold
+MinBtn.BorderSizePixel  = 0
+MinBtn.Parent           = Header
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
+local minStroke = Instance.new("UIStroke")
+minStroke.Color = Color3.fromRGB(0,80,120); minStroke.Thickness=1; minStroke.Parent=MinBtn
+
+local minimized = false
+local function toggleMinimize()
+    minimized = not minimized
+    ScrollFrame.Visible = not minimized
+    MainFrame.Size = minimized
+        and UDim2.new(0, 318, 0, 46)
+        or  UDim2.new(0, 318, 0, 590)
+    MinBtn.Text = minimized and "▲" or "—"
+    MinBtn.TextColor3 = minimized
+        and Color3.fromRGB(0,255,150)
+        or  Color3.fromRGB(0,180,255)
+end
+
+MinBtn.MouseButton1Click:Connect(toggleMinimize)
+
+-- tecla HOME para minimizar/restaurar
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Home then
+        toggleMinimize()
+    end
+end)
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size             = UDim2.new(0,28,0,28)
