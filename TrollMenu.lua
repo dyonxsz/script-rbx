@@ -1,837 +1,781 @@
--- ╔══════════════════════════════════════════════╗
--- ║         TROLL MENU v2 - by Script            ║
--- ║   Spin | Fly | TP | Sarrar | SpeedHack       ║
--- ╚══════════════════════════════════════════════╝
+-- ╔══════════════════════════════════════════════════════════════╗
+-- ║              TROLL MENU v4  -  JJSploit                     ║
+-- ║  Spin | Fly | Sarrar | Speed | Jump | Fling | ESP | Orbit   ║
+-- ╚══════════════════════════════════════════════════════════════╝
 
-local Players      = game:GetService("Players")
-local RunService   = game:GetService("RunService")
+local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local LocalPlayer  = Players.LocalPlayer
-local Character    = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Camera       = workspace.CurrentCamera
+local LocalPlayer      = Players.LocalPlayer
+local Camera           = workspace.CurrentCamera
 
 -- ══════════════════════════════════════════
---  VARIAVEIS DE CONTROLE
+--  VARIAVEIS
 -- ══════════════════════════════════════════
-local target         = nil
-local spinEnabled    = false
-local flyEnabled     = false
-local tpEnabled      = false
-local sarrarEnabled  = false
-local speedEnabled   = false
+local target      = nil
+local searchQuery = ""
+local logScroll   = nil
 
-local spinSpeed      = 8       -- velocidade do spin (graus por frame)
-local flySpeed       = 50      -- velocidade do fly
-local studs          = 1       -- distancia do sarrar (studs)
-local speedValue     = 50      -- walkspeed
+-- estados
+local spinEnabled       = false
+local flyEnabled        = false
+local sarrarEnabled     = false
+local speedEnabled      = false
+local jumpEnabled       = false
+local espEnabled        = false
+local orbitEnabled      = false
+local loopTpEnabled     = false
+local cameraLockEnabled = false
 
-local flyBodyVel     = nil
-local flyBodyGyro    = nil
-local connections    = {}
+-- valores
+local spinSpeed  = 8
+local flySpeed   = 50
+local studs      = 1
+local speedValue = 50
+local jumpValue  = 50
+local orbitRadius= 5
+local orbitSpeed = 3
+
+-- objetos de voo
+local flyBodyVel  = nil
+local flyBodyGyro = nil
+
+-- loops/threads ativos
+local orbitAngle  = 0
+
+-- ESP: guarda os BillboardGuis criados
+local espObjects  = {}
 
 -- ══════════════════════════════════════════
---  HELPER: pega HumanoidRootPart seguro
+--  HELPERS
 -- ══════════════════════════════════════════
 local function getRoot(player)
-    local char = player and player.Character
-    if char then return char:FindFirstChild("HumanoidRootPart") end
-    return nil
+    local c = player and player.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
 end
-
 local function getHum(player)
-    local char = player and player.Character
-    if char then return char:FindFirstChildOfClass("Humanoid") end
-    return nil
+    local c = player and player.Character
+    return c and c:FindFirstChildOfClass("Humanoid")
 end
-
-local function myRoot()
-    return getRoot(LocalPlayer)
-end
+local function myRoot() return getRoot(LocalPlayer) end
 
 -- ══════════════════════════════════════════
---  GUI PRINCIPAL
+--  GUI BASE
 -- ══════════════════════════════════════════
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "TrollMenuV2"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = game.CoreGui
+ScreenGui.Name          = "TrollMenuV4"
+ScreenGui.ResetOnSpawn  = false
+ScreenGui.ZIndexBehavior= Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent        = game.CoreGui
 
--- Frame principal
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 310, 0, 540)
-MainFrame.Position = UDim2.new(0, 20, 0.5, -270)
-MainFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
+MainFrame.Size            = UDim2.new(0, 318, 0, 590)
+MainFrame.Position        = UDim2.new(0, 20, 0.5, -295)
+MainFrame.BackgroundColor3= Color3.fromRGB(8, 8, 18)
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+MainFrame.Active          = true
+MainFrame.Draggable       = true
+MainFrame.Parent          = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 5)
+local ms = Instance.new("UIStroke")
+ms.Color = Color3.fromRGB(220,0,60); ms.Thickness = 1.5; ms.Parent = MainFrame
 
--- Borda vermelha
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(220, 0, 60)
-MainStroke.Thickness = 1.5
-MainStroke.Parent = MainFrame
-
--- Corner
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 4)
-MainCorner.Parent = MainFrame
-
--- ── HEADER ───────────────────────────────
+-- ── HEADER ──────────────────────────────
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 46)
+Header.Size             = UDim2.new(1, 0, 0, 46)
 Header.BackgroundColor3 = Color3.fromRGB(14, 8, 30)
-Header.BorderSizePixel = 0
-Header.Parent = MainFrame
+Header.BorderSizePixel  = 0
+Header.Parent           = MainFrame
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 5)
 
-local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 4)
-HeaderCorner.Parent = Header
-
--- linha topo vermelha
 local TopLine = Instance.new("Frame")
-TopLine.Size = UDim2.new(1, 0, 0, 2)
+TopLine.Size             = UDim2.new(1, 0, 0, 2)
 TopLine.BackgroundColor3 = Color3.fromRGB(220, 0, 60)
-TopLine.BorderSizePixel = 0
-TopLine.Parent = Header
-
-local TopGrad = Instance.new("UIGradient")
-TopGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(220,0,60)),
+TopLine.BorderSizePixel  = 0
+TopLine.Parent           = Header
+local tg = Instance.new("UIGradient")
+tg.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0,   Color3.fromRGB(220,0,60)),
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255,80,0)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(220,0,60)),
+    ColorSequenceKeypoint.new(1,   Color3.fromRGB(220,0,60)),
 })
-TopGrad.Parent = TopLine
+tg.Parent = TopLine
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -60, 1, 0)
-TitleLabel.Position = UDim2.new(0, 14, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "💀 TROLL.EXE"
-TitleLabel.TextColor3 = Color3.fromRGB(220, 0, 60)
-TitleLabel.TextSize = 16
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = Header
+local function makeLabel(parent, text, size, pos, color, fontSize, font, align)
+    local l = Instance.new("TextLabel")
+    l.Size               = size
+    l.Position           = pos
+    l.BackgroundTransparency = 1
+    l.Text               = text
+    l.TextColor3         = color
+    l.TextSize           = fontSize
+    l.Font               = font or Enum.Font.GothamBold
+    l.TextXAlignment     = align or Enum.TextXAlignment.Left
+    l.Parent             = parent
+    return l
+end
 
-local SubLabel = Instance.new("TextLabel")
-SubLabel.Size = UDim2.new(1, -60, 0, 14)
-SubLabel.Position = UDim2.new(0, 14, 0, 28)
-SubLabel.BackgroundTransparency = 1
-SubLabel.Text = "MOD MENU  •  JJSPLOIT"
-SubLabel.TextColor3 = Color3.fromRGB(80, 40, 80)
-SubLabel.TextSize = 9
-SubLabel.Font = Enum.Font.Code
-SubLabel.TextXAlignment = Enum.TextXAlignment.Left
-SubLabel.Parent = Header
+makeLabel(Header, "💀 TROLL.EXE  v4",
+    UDim2.new(1,-60,1,0), UDim2.new(0,14,0,0),
+    Color3.fromRGB(220,0,60), 16)
+makeLabel(Header, "MOD MENU  •  JJSPLOIT",
+    UDim2.new(1,-60,0,14), UDim2.new(0,14,0,28),
+    Color3.fromRGB(80,40,80), 9, Enum.Font.Code)
 
--- Botão fechar
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 28, 0, 28)
-CloseBtn.Position = UDim2.new(1, -36, 0.5, -14)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(30, 10, 10)
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(180, 0, 40)
-CloseBtn.TextSize = 14
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.BorderSizePixel = 0
-CloseBtn.Parent = Header
+CloseBtn.Size             = UDim2.new(0,28,0,28)
+CloseBtn.Position         = UDim2.new(1,-36,0.5,-14)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(30,10,10)
+CloseBtn.Text             = "✕"
+CloseBtn.TextColor3       = Color3.fromRGB(180,0,40)
+CloseBtn.TextSize         = 14
+CloseBtn.Font             = Enum.Font.GothamBold
+CloseBtn.BorderSizePixel  = 0
+CloseBtn.Parent           = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
 CloseBtn.MouseButton1Click:Connect(function()
+    -- ── CLEANUP TOTAL: apaga tudo sem deixar rastro ──
+
+    -- desativa fly (remove BodyVelocity e BodyGyro)
+    disableFly()
+
+    -- restaura WalkSpeed e JumpPower originais
+    local hum = getHum(LocalPlayer)
+    if hum then
+        hum.WalkSpeed   = 16
+        hum.JumpPower   = 50
+        hum.PlatformStand = false
+    end
+
+    -- restaura câmera
+    Camera.CameraType = Enum.CameraType.Custom
+    if hum then Camera.CameraSubject = hum end
+
+    -- desancora target se estava frozen (safety)
+    if target then
+        local tRoot = getRoot(target)
+        if tRoot then tRoot.Anchored = false end
+    end
+
+    -- limpa ESP (BillboardGuis)
+    clearEsp()
+
+    -- destrói a GUI inteira
     ScreenGui:Destroy()
 end)
 
--- ── SCROLL CONTENT ───────────────────────
+-- ── SCROLL PRINCIPAL ─────────────────────
 local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, 0, 1, -46)
-ScrollFrame.Position = UDim2.new(0, 0, 0, 46)
-ScrollFrame.BackgroundTransparency = 1
-ScrollFrame.BorderSizePixel = 0
-ScrollFrame.ScrollBarThickness = 3
-ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(220, 0, 60)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-ScrollFrame.Parent = MainFrame
-
-local ContentLayout = Instance.new("UIListLayout")
-ContentLayout.Padding = UDim.new(0, 4)
-ContentLayout.Parent = ScrollFrame
-
-local ContentPad = Instance.new("UIPadding")
-ContentPad.PaddingLeft  = UDim.new(0, 8)
-ContentPad.PaddingRight = UDim.new(0, 8)
-ContentPad.PaddingTop   = UDim.new(0, 8)
-ContentPad.PaddingBottom= UDim.new(0, 8)
-ContentPad.Parent = ScrollFrame
+ScrollFrame.Size                  = UDim2.new(1, 0, 1, -46)
+ScrollFrame.Position              = UDim2.new(0, 0, 0, 46)
+ScrollFrame.BackgroundTransparency= 1
+ScrollFrame.BorderSizePixel       = 0
+ScrollFrame.ScrollBarThickness    = 3
+ScrollFrame.ScrollBarImageColor3  = Color3.fromRGB(220,0,60)
+ScrollFrame.CanvasSize            = UDim2.new(0,0,0,0)
+ScrollFrame.AutomaticCanvasSize   = Enum.AutomaticSize.Y
+ScrollFrame.Parent                = MainFrame
+local cl = Instance.new("UIListLayout"); cl.Padding = UDim.new(0,4); cl.Parent = ScrollFrame
+local cp = Instance.new("UIPadding")
+cp.PaddingLeft=UDim.new(0,8); cp.PaddingRight=UDim.new(0,8)
+cp.PaddingTop=UDim.new(0,8);  cp.PaddingBottom=UDim.new(0,8)
+cp.Parent = ScrollFrame
 
 -- ══════════════════════════════════════════
---  FACTORY FUNCTIONS
+--  FACTORY: seção, toggle, slider
 -- ══════════════════════════════════════════
-
--- Rótulo de seção
 local function makeSection(text)
     local f = Instance.new("Frame")
-    f.Size = UDim2.new(1, 0, 0, 20)
-    f.BackgroundTransparency = 1
-    f.Parent = ScrollFrame
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = "── " .. text .. " ──"
-    lbl.TextColor3 = Color3.fromRGB(150, 0, 40)
-    lbl.TextSize = 9
-    lbl.Font = Enum.Font.Code
-    lbl.Parent = f
-    return f
+    f.Size = UDim2.new(1,0,0,20); f.BackgroundTransparency=1; f.Parent=ScrollFrame
+    local l = Instance.new("TextLabel")
+    l.Size=UDim2.new(1,0,1,0); l.BackgroundTransparency=1
+    l.Text="── "..text.." ──"; l.TextColor3=Color3.fromRGB(150,0,40)
+    l.TextSize=9; l.Font=Enum.Font.Code; l.Parent=f
 end
 
--- Botão toggle
-local function makeToggle(icon, label, callback)
+local function makeToggle(icon, labelTxt, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 38)
-    btn.BackgroundColor3 = Color3.fromRGB(14, 6, 20)
-    btn.BorderSizePixel = 0
-    btn.Text = ""
-    btn.AutoButtonColor = false
-    btn.Parent = ScrollFrame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    btn.Size=UDim2.new(1,0,0,38); btn.BackgroundColor3=Color3.fromRGB(14,6,20)
+    btn.BorderSizePixel=0; btn.Text=""; btn.AutoButtonColor=false; btn.Parent=ScrollFrame
+    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,4)
+    local stroke=Instance.new("UIStroke"); stroke.Color=Color3.fromRGB(60,0,30); stroke.Thickness=1; stroke.Parent=btn
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(60, 0, 30)
-    stroke.Thickness = 1
-    stroke.Parent = btn
+    local il=Instance.new("TextLabel"); il.Size=UDim2.new(0,30,1,0); il.Position=UDim2.new(0,6,0,0)
+    il.BackgroundTransparency=1; il.Text=icon; il.TextSize=16; il.Font=Enum.Font.GothamBold; il.Parent=btn
 
-    local iconL = Instance.new("TextLabel")
-    iconL.Size = UDim2.new(0, 30, 1, 0)
-    iconL.Position = UDim2.new(0, 6, 0, 0)
-    iconL.BackgroundTransparency = 1
-    iconL.Text = icon
-    iconL.TextSize = 16
-    iconL.Font = Enum.Font.GothamBold
-    iconL.TextColor3 = Color3.fromRGB(200, 200, 200)
-    iconL.Parent = btn
+    local tl=Instance.new("TextLabel"); tl.Size=UDim2.new(1,-90,1,0); tl.Position=UDim2.new(0,40,0,0)
+    tl.BackgroundTransparency=1; tl.Text=labelTxt; tl.TextColor3=Color3.fromRGB(180,180,180)
+    tl.TextSize=11; tl.Font=Enum.Font.GothamBold; tl.TextXAlignment=Enum.TextXAlignment.Left; tl.Parent=btn
 
-    local textL = Instance.new("TextLabel")
-    textL.Size = UDim2.new(1, -90, 1, 0)
-    textL.Position = UDim2.new(0, 40, 0, 0)
-    textL.BackgroundTransparency = 1
-    textL.Text = label
-    textL.TextColor3 = Color3.fromRGB(180, 180, 180)
-    textL.TextSize = 11
-    textL.Font = Enum.Font.GothamBold
-    textL.TextXAlignment = Enum.TextXAlignment.Left
-    textL.Parent = btn
+    local badge=Instance.new("TextLabel"); badge.Size=UDim2.new(0,40,0,18); badge.Position=UDim2.new(1,-48,0.5,-9)
+    badge.BackgroundColor3=Color3.fromRGB(20,20,20); badge.Text="OFF"; badge.TextColor3=Color3.fromRGB(80,80,80)
+    badge.TextSize=9; badge.Font=Enum.Font.GothamBold; badge.BorderSizePixel=0; badge.Parent=btn
+    Instance.new("UICorner",badge).CornerRadius=UDim.new(0,3)
 
-    local badge = Instance.new("TextLabel")
-    badge.Size = UDim2.new(0, 40, 0, 18)
-    badge.Position = UDim2.new(1, -48, 0.5, -9)
-    badge.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    badge.Text = "OFF"
-    badge.TextColor3 = Color3.fromRGB(80, 80, 80)
-    badge.TextSize = 9
-    badge.Font = Enum.Font.GothamBold
-    badge.BorderSizePixel = 0
-    badge.Parent = btn
-    Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 3)
-
-    local active = false
-
+    local active=false
     local function setActive(val)
-        active = val
+        active=val
         if val then
-            btn.BackgroundColor3  = Color3.fromRGB(30, 5, 20)
-            stroke.Color          = Color3.fromRGB(220, 0, 60)
-            textL.TextColor3      = Color3.fromRGB(255, 60, 100)
-            badge.Text            = "ON"
-            badge.TextColor3      = Color3.fromRGB(0, 220, 100)
-            badge.BackgroundColor3= Color3.fromRGB(0, 40, 15)
+            btn.BackgroundColor3=Color3.fromRGB(30,5,20); stroke.Color=Color3.fromRGB(220,0,60)
+            tl.TextColor3=Color3.fromRGB(255,60,100); badge.Text="ON"
+            badge.TextColor3=Color3.fromRGB(0,220,100); badge.BackgroundColor3=Color3.fromRGB(0,40,15)
         else
-            btn.BackgroundColor3  = Color3.fromRGB(14, 6, 20)
-            stroke.Color          = Color3.fromRGB(60, 0, 30)
-            textL.TextColor3      = Color3.fromRGB(180, 180, 180)
-            badge.Text            = "OFF"
-            badge.TextColor3      = Color3.fromRGB(80, 80, 80)
-            badge.BackgroundColor3= Color3.fromRGB(20, 20, 20)
+            btn.BackgroundColor3=Color3.fromRGB(14,6,20); stroke.Color=Color3.fromRGB(60,0,30)
+            tl.TextColor3=Color3.fromRGB(180,180,180); badge.Text="OFF"
+            badge.TextColor3=Color3.fromRGB(80,80,80); badge.BackgroundColor3=Color3.fromRGB(20,20,20)
         end
     end
-
-    btn.MouseButton1Click:Connect(function()
-        active = not active
-        setActive(active)
-        callback(active)
-    end)
-
+    btn.MouseButton1Click:Connect(function() active=not active; setActive(active); callback(active) end)
     return btn, setActive
 end
 
--- Slider
-local function makeSlider(icon, label, minV, maxV, defaultV, step, onChange)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 48)
-    frame.BackgroundColor3 = Color3.fromRGB(6, 14, 20)
-    frame.BorderSizePixel = 0
-    frame.Parent = ScrollFrame
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 4)
-    local st = Instance.new("UIStroke")
-    st.Color = Color3.fromRGB(0, 60, 80)
-    st.Thickness = 1
-    st.Parent = frame
+local function makeSlider(icon, labelTxt, minV, maxV, defaultV, step, onChange)
+    local frame=Instance.new("Frame"); frame.Size=UDim2.new(1,0,0,48)
+    frame.BackgroundColor3=Color3.fromRGB(6,14,20); frame.BorderSizePixel=0; frame.Parent=ScrollFrame
+    Instance.new("UICorner",frame).CornerRadius=UDim.new(0,4)
+    local st=Instance.new("UIStroke"); st.Color=Color3.fromRGB(0,60,80); st.Thickness=1; st.Parent=frame
 
-    local topRow = Instance.new("Frame")
-    topRow.Size = UDim2.new(1, -12, 0, 22)
-    topRow.Position = UDim2.new(0, 6, 0, 4)
-    topRow.BackgroundTransparency = 1
-    topRow.Parent = frame
+    local row=Instance.new("Frame"); row.Size=UDim2.new(1,-12,0,22); row.Position=UDim2.new(0,6,0,4)
+    row.BackgroundTransparency=1; row.Parent=frame
 
-    local iconL = Instance.new("TextLabel")
-    iconL.Size = UDim2.new(0, 22, 1, 0)
-    iconL.BackgroundTransparency = 1
-    iconL.Text = icon
-    iconL.TextSize = 13
-    iconL.Font = Enum.Font.GothamBold
-    iconL.TextColor3 = Color3.fromRGB(0, 200, 220)
-    iconL.Parent = topRow
+    local iL=Instance.new("TextLabel"); iL.Size=UDim2.new(0,22,1,0); iL.BackgroundTransparency=1
+    iL.Text=icon; iL.TextSize=13; iL.Font=Enum.Font.GothamBold; iL.TextColor3=Color3.fromRGB(0,200,220); iL.Parent=row
 
-    local labelL = Instance.new("TextLabel")
-    labelL.Size = UDim2.new(1, -60, 1, 0)
-    labelL.Position = UDim2.new(0, 26, 0, 0)
-    labelL.BackgroundTransparency = 1
-    labelL.Text = label
-    labelL.TextColor3 = Color3.fromRGB(0, 200, 220)
-    labelL.TextSize = 10
-    labelL.Font = Enum.Font.GothamBold
-    labelL.TextXAlignment = Enum.TextXAlignment.Left
-    labelL.Parent = topRow
+    local lL=Instance.new("TextLabel"); lL.Size=UDim2.new(1,-60,1,0); lL.Position=UDim2.new(0,26,0,0)
+    lL.BackgroundTransparency=1; lL.Text=labelTxt; lL.TextColor3=Color3.fromRGB(0,200,220)
+    lL.TextSize=10; lL.Font=Enum.Font.GothamBold; lL.TextXAlignment=Enum.TextXAlignment.Left; lL.Parent=row
 
-    local valL = Instance.new("TextLabel")
-    valL.Size = UDim2.new(0, 50, 1, 0)
-    valL.Position = UDim2.new(1, -50, 0, 0)
-    valL.BackgroundTransparency = 1
-    valL.Text = tostring(defaultV)
-    valL.TextColor3 = Color3.fromRGB(0, 255, 200)
-    valL.TextSize = 11
-    valL.Font = Enum.Font.GothamBold
-    valL.TextXAlignment = Enum.TextXAlignment.Right
-    valL.Parent = topRow
+    local vL=Instance.new("TextLabel"); vL.Size=UDim2.new(0,50,1,0); vL.Position=UDim2.new(1,-50,0,0)
+    vL.BackgroundTransparency=1; vL.Text=tostring(defaultV); vL.TextColor3=Color3.fromRGB(0,255,200)
+    vL.TextSize=11; vL.Font=Enum.Font.GothamBold; vL.TextXAlignment=Enum.TextXAlignment.Right; vL.Parent=row
 
-    -- Track
-    local trackBg = Instance.new("Frame")
-    trackBg.Size = UDim2.new(1, -12, 0, 6)
-    trackBg.Position = UDim2.new(0, 6, 0, 32)
-    trackBg.BackgroundColor3 = Color3.fromRGB(20, 40, 50)
-    trackBg.BorderSizePixel = 0
-    trackBg.Parent = frame
-    Instance.new("UICorner", trackBg).CornerRadius = UDim.new(1, 0)
+    local track=Instance.new("Frame"); track.Size=UDim2.new(1,-12,0,6); track.Position=UDim2.new(0,6,0,32)
+    track.BackgroundColor3=Color3.fromRGB(20,40,50); track.BorderSizePixel=0; track.Parent=frame
+    Instance.new("UICorner",track).CornerRadius=UDim.new(1,0)
 
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((defaultV - minV) / (maxV - minV), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(0, 200, 220)
-    fill.BorderSizePixel = 0
-    fill.Parent = trackBg
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+    local fill=Instance.new("Frame"); fill.Size=UDim2.new((defaultV-minV)/(maxV-minV),0,1,0)
+    fill.BackgroundColor3=Color3.fromRGB(0,200,220); fill.BorderSizePixel=0; fill.Parent=track
+    Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
+    local fg=Instance.new("UIGradient"); fg.Color=ColorSequence.new({
+        ColorSequenceKeypoint.new(0,Color3.fromRGB(0,200,220)),
+        ColorSequenceKeypoint.new(1,Color3.fromRGB(0,100,255))
+    }); fg.Parent=fill
 
-    local fillGrad = Instance.new("UIGradient")
-    fillGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0,200,220)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0,100,255)),
-    })
-    fillGrad.Parent = fill
+    local thumb=Instance.new("Frame"); thumb.Size=UDim2.new(0,14,0,14)
+    thumb.AnchorPoint=Vector2.new(0.5,0.5); thumb.Position=UDim2.new((defaultV-minV)/(maxV-minV),0,0.5,0)
+    thumb.BackgroundColor3=Color3.fromRGB(0,220,255); thumb.BorderSizePixel=0; thumb.Parent=track
+    Instance.new("UICorner",thumb).CornerRadius=UDim.new(1,0)
 
-    local thumb = Instance.new("Frame")
-    thumb.Size = UDim2.new(0, 14, 0, 14)
-    thumb.AnchorPoint = Vector2.new(0.5, 0.5)
-    thumb.Position = UDim2.new((defaultV - minV)/(maxV - minV), 0, 0.5, 0)
-    thumb.BackgroundColor3 = Color3.fromRGB(0, 220, 255)
-    thumb.BorderSizePixel = 0
-    thumb.Parent = trackBg
-    Instance.new("UICorner", thumb).CornerRadius = UDim.new(1, 0)
-
-    local currentVal = defaultV
-    local dragging = false
-
-    local function updateSlider(x)
-        local abs = trackBg.AbsolutePosition.X
-        local w   = trackBg.AbsoluteSize.X
-        local t   = math.clamp((x - abs) / w, 0, 1)
-        local raw = minV + t * (maxV - minV)
-        -- snap to step
-        local snapped = math.round(raw / step) * step
-        snapped = math.clamp(snapped, minV, maxV)
-        currentVal = snapped
-        local pct = (snapped - minV) / (maxV - minV)
-        fill.Size = UDim2.new(pct, 0, 1, 0)
-        thumb.Position = UDim2.new(pct, 0, 0.5, 0)
-        valL.Text = tostring(snapped)
-        onChange(snapped)
+    local dragging=false
+    local function upd(x)
+        local t=math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
+        local v=math.clamp(math.round((minV+t*(maxV-minV))/step)*step,minV,maxV)
+        local p=(v-minV)/(maxV-minV)
+        fill.Size=UDim2.new(p,0,1,0); thumb.Position=UDim2.new(p,0,0.5,0)
+        vL.Text=tostring(v); onChange(v)
     end
-
-    trackBg.InputBegan:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            updateSlider(inp.Position.X)
+    track.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+            dragging=true; upd(i.Position.X)
         end
     end)
-
-    UserInputService.InputChanged:Connect(function(inp)
-        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
-            updateSlider(inp.Position.X)
-        end
+    UserInputService.InputChanged:Connect(function(i)
+        if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then upd(i.Position.X) end
     end)
-
-    UserInputService.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end
     end)
-
     return frame
 end
 
--- Label target
-local function makeTargetDisplay()
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1, 0, 0, 36)
-    f.BackgroundColor3 = Color3.fromRGB(25, 5, 10)
-    f.BorderSizePixel = 0
-    f.Parent = ScrollFrame
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
-    local st = Instance.new("UIStroke")
-    st.Color = Color3.fromRGB(120, 0, 40)
-    st.Thickness = 1
-    st.Parent = f
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Name = "TargetLabel"
-    lbl.Size = UDim2.new(1, -10, 1, 0)
-    lbl.Position = UDim2.new(0, 10, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = "🎯 TARGET: NENHUM"
-    lbl.TextColor3 = Color3.fromRGB(220, 0, 60)
-    lbl.TextSize = 11
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Parent = f
-    return f, lbl
-end
-
--- Player list
-local function makePlayerList()
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1, 0, 0, 160)
-    f.BackgroundColor3 = Color3.fromRGB(6, 8, 20)
-    f.BorderSizePixel = 0
-    f.Parent = ScrollFrame
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
-    local st = Instance.new("UIStroke")
-    st.Color = Color3.fromRGB(0, 40, 80)
-    st.Thickness = 1
-    st.Parent = f
-
-    local header = Instance.new("TextLabel")
-    header.Size = UDim2.new(1, 0, 0, 20)
-    header.BackgroundColor3 = Color3.fromRGB(0, 10, 30)
-    header.BorderSizePixel = 0
-    header.Text = "  👥 JOGADORES ONLINE"
-    header.TextColor3 = Color3.fromRGB(0, 180, 255)
-    header.TextSize = 9
-    header.Font = Enum.Font.GothamBold
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.Parent = f
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 4)
-
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, -4, 1, -24)
-    scroll.Position = UDim2.new(0, 2, 0, 22)
-    scroll.BackgroundTransparency = 1
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 2
-    scroll.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 200)
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scroll.Parent = f
-
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 2)
-    layout.Parent = scroll
-
-    local pad = Instance.new("UIPadding")
-    pad.PaddingLeft = UDim.new(0, 4)
-    pad.PaddingRight = UDim.new(0, 4)
-    pad.PaddingTop = UDim.new(0, 2)
-    pad.Parent = scroll
-
-    return f, scroll
-end
-
--- Log box
-local function makeLogBox()
-    local f = Instance.new("Frame")
-    f.Size = UDim2.new(1, 0, 0, 70)
-    f.BackgroundColor3 = Color3.fromRGB(4, 4, 8)
-    f.BorderSizePixel = 0
-    f.Parent = ScrollFrame
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 4)
-    local st = Instance.new("UIStroke")
-    st.Color = Color3.fromRGB(40, 0, 20)
-    st.Thickness = 1
-    st.Parent = f
-
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Size = UDim2.new(1, -4, 1, -4)
-    scroll.Position = UDim2.new(0, 2, 0, 2)
-    scroll.BackgroundTransparency = 1
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 2
-    scroll.ScrollBarImageColor3 = Color3.fromRGB(100, 0, 30)
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scroll.Parent = f
-
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 1)
-    layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-    layout.Parent = scroll
-
-    local pad = Instance.new("UIPadding")
-    pad.PaddingLeft = UDim.new(0, 5)
-    pad.PaddingBottom = UDim.new(0, 2)
-    pad.Parent = scroll
-
-    return f, scroll
+-- ══════════════════════════════════════════
+--  LOG
+-- ══════════════════════════════════════════
+local logColors={info=Color3.fromRGB(0,160,220),ok=Color3.fromRGB(0,200,80),warn=Color3.fromRGB(255,130,0),err=Color3.fromRGB(220,40,60)}
+local function log(msg, tipo)
+    if not logScroll then return end
+    tipo=tipo or "info"
+    local pfx={info="[INFO]",ok="[ OK ]",warn="[TROL]",err="[ERR ]"}
+    local line=Instance.new("TextLabel"); line.Size=UDim2.new(1,0,0,12); line.BackgroundTransparency=1
+    line.Text=pfx[tipo].." "..msg; line.TextColor3=logColors[tipo]; line.TextSize=8
+    line.Font=Enum.Font.Code; line.TextXAlignment=Enum.TextXAlignment.Left; line.Parent=logScroll
+    local lbls={}; for _,c in ipairs(logScroll:GetChildren()) do if c:IsA("TextLabel") then table.insert(lbls,c) end end
+    if #lbls>40 then lbls[1]:Destroy() end
+    task.defer(function() logScroll.CanvasPosition=Vector2.new(0,logScroll.AbsoluteCanvasSize.Y) end)
 end
 
 -- ══════════════════════════════════════════
---  CONSTRUIR INTERFACE
+--  TARGET DISPLAY
 -- ══════════════════════════════════════════
-
--- Target display
 makeSection("TARGET")
-local _, targetLabel = makeTargetDisplay()
 
--- Players
+local targetFrame=Instance.new("Frame"); targetFrame.Size=UDim2.new(1,0,0,36)
+targetFrame.BackgroundColor3=Color3.fromRGB(25,5,10); targetFrame.BorderSizePixel=0; targetFrame.Parent=ScrollFrame
+Instance.new("UICorner",targetFrame).CornerRadius=UDim.new(0,4)
+local tst=Instance.new("UIStroke"); tst.Color=Color3.fromRGB(120,0,40); tst.Thickness=1; tst.Parent=targetFrame
+local targetLabel=Instance.new("TextLabel"); targetLabel.Size=UDim2.new(1,-10,1,0); targetLabel.Position=UDim2.new(0,10,0,0)
+targetLabel.BackgroundTransparency=1; targetLabel.Text="🎯 TARGET: NENHUM"
+targetLabel.TextColor3=Color3.fromRGB(220,0,60); targetLabel.TextSize=11; targetLabel.Font=Enum.Font.GothamBold
+targetLabel.TextXAlignment=Enum.TextXAlignment.Left; targetLabel.Parent=targetFrame
+
+-- ══════════════════════════════════════════
+--  PLAYER LIST + BARRA DE PESQUISA
+-- ══════════════════════════════════════════
 makeSection("JOGADORES")
-local _, playerScroll = makePlayerList()
 
--- Movement
-makeSection("MOVEMENT")
+local playerSection=Instance.new("Frame"); playerSection.Size=UDim2.new(1,0,0,198)
+playerSection.BackgroundColor3=Color3.fromRGB(6,8,20); playerSection.BorderSizePixel=0; playerSection.Parent=ScrollFrame
+Instance.new("UICorner",playerSection).CornerRadius=UDim.new(0,4)
+local pst=Instance.new("UIStroke"); pst.Color=Color3.fromRGB(0,40,80); pst.Thickness=1; pst.Parent=playerSection
 
-local _, setSpinActive = makeToggle("🌀", "SPIN", function(on)
-    spinEnabled = on
-    log(on and "Spin ATIVADO" or "Spin desativado", on and "ok" or "info")
+-- header
+local pHeader=Instance.new("Frame"); pHeader.Size=UDim2.new(1,0,0,22)
+pHeader.BackgroundColor3=Color3.fromRGB(0,10,30); pHeader.BorderSizePixel=0; pHeader.Parent=playerSection
+Instance.new("UICorner",pHeader).CornerRadius=UDim.new(0,4)
+local pHeaderLbl=Instance.new("TextLabel"); pHeaderLbl.Size=UDim2.new(0.6,0,1,0); pHeaderLbl.Position=UDim2.new(0,8,0,0)
+pHeaderLbl.BackgroundTransparency=1; pHeaderLbl.Text="👥 JOGADORES ONLINE"; pHeaderLbl.TextColor3=Color3.fromRGB(0,180,255)
+pHeaderLbl.TextSize=9; pHeaderLbl.Font=Enum.Font.GothamBold; pHeaderLbl.TextXAlignment=Enum.TextXAlignment.Left; pHeaderLbl.Parent=pHeader
+local pCountLbl=Instance.new("TextLabel"); pCountLbl.Size=UDim2.new(0.35,0,1,0); pCountLbl.Position=UDim2.new(0.65,0,0,0)
+pCountLbl.BackgroundTransparency=1; pCountLbl.Text="0 players"; pCountLbl.TextColor3=Color3.fromRGB(220,0,60)
+pCountLbl.TextSize=9; pCountLbl.Font=Enum.Font.GothamBold; pCountLbl.TextXAlignment=Enum.TextXAlignment.Right; pCountLbl.Parent=pHeader
+
+-- barra de pesquisa
+local searchBg=Instance.new("Frame"); searchBg.Size=UDim2.new(1,-10,0,28); searchBg.Position=UDim2.new(0,5,0,26)
+searchBg.BackgroundColor3=Color3.fromRGB(12,12,30); searchBg.BorderSizePixel=0; searchBg.Parent=playerSection
+Instance.new("UICorner",searchBg).CornerRadius=UDim.new(0,4)
+local sst=Instance.new("UIStroke"); sst.Color=Color3.fromRGB(60,60,120); sst.Thickness=1; sst.Parent=searchBg
+
+local lupaL=Instance.new("TextLabel"); lupaL.Size=UDim2.new(0,24,1,0); lupaL.Position=UDim2.new(0,4,0,0)
+lupaL.BackgroundTransparency=1; lupaL.Text="🔍"; lupaL.TextSize=12; lupaL.Font=Enum.Font.GothamBold; lupaL.Parent=searchBg
+
+local searchBox=Instance.new("TextBox"); searchBox.Size=UDim2.new(1,-54,1,0); searchBox.Position=UDim2.new(0,28,0,0)
+searchBox.BackgroundTransparency=1; searchBox.BorderSizePixel=0; searchBox.Text=""
+searchBox.PlaceholderText="Pesquisar jogador..."; searchBox.PlaceholderColor3=Color3.fromRGB(70,70,100)
+searchBox.TextColor3=Color3.fromRGB(200,200,255); searchBox.TextSize=10; searchBox.Font=Enum.Font.Gotham
+searchBox.TextXAlignment=Enum.TextXAlignment.Left; searchBox.ClearTextOnFocus=false; searchBox.Parent=searchBg
+
+local clearSearchBtn=Instance.new("TextButton"); clearSearchBtn.Size=UDim2.new(0,22,1,0); clearSearchBtn.Position=UDim2.new(1,-24,0,0)
+clearSearchBtn.BackgroundTransparency=1; clearSearchBtn.BorderSizePixel=0; clearSearchBtn.Text="✕"
+clearSearchBtn.TextColor3=Color3.fromRGB(80,80,120); clearSearchBtn.TextSize=10; clearSearchBtn.Font=Enum.Font.GothamBold; clearSearchBtn.Parent=searchBg
+
+searchBox.Focused:Connect(function()   sst.Color=Color3.fromRGB(0,120,220) end)
+searchBox.FocusLost:Connect(function() sst.Color=Color3.fromRGB(60,60,120) end)
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    searchQuery=searchBox.Text:lower(); renderPlayers()
+end)
+clearSearchBtn.MouseButton1Click:Connect(function()
+    searchBox.Text=""; searchQuery=""; sst.Color=Color3.fromRGB(60,60,120); renderPlayers()
 end)
 
-local _, setFlyActive = makeToggle("🚀", "FLY", function(on)
-    flyEnabled = on
-    if on then
-        enableFly()
-        log("Fly ATIVADO", "ok")
-    else
-        disableFly()
-        log("Fly desativado", "info")
-    end
-end)
-
-makeSlider("⚡", "FLY SPEED", 10, 200, 50, 5, function(v)
-    flySpeed = v
-end)
-
--- Speed
-makeSection("SPEED")
-
-local _, setSpeedActive = makeToggle("🏃", "SPEED HACK", function(on)
-    speedEnabled = on
-    local hum = getHum(LocalPlayer)
-    if hum then
-        hum.WalkSpeed = on and speedValue or 16
-    end
-    log(on and ("SpeedHack ON → " .. speedValue) or "SpeedHack OFF → 16", on and "ok" or "info")
-end)
-
-makeSlider("💨", "WALK SPEED", 16, 500, 50, 1, function(v)
-    speedValue = v
-    if speedEnabled then
-        local hum = getHum(LocalPlayer)
-        if hum then hum.WalkSpeed = v end
-    end
-end)
-
--- Teleport
-makeSection("TELEPORT")
-
-local _, setTpActive = makeToggle("⚡", "TP TO TARGET", function(on)
-    tpEnabled = on
-    if on then
-        if not target then
-            log("Selecione um target primeiro!", "err")
-            tpEnabled = false
-            setTpActive(false)
-            return
-        end
-        local root = myRoot()
-        local tRoot = getRoot(target)
-        if root and tRoot then
-            root.CFrame = tRoot.CFrame + Vector3.new(0, 3, 0)
-            log("TP → " .. target.Name, "ok")
-        end
-        tpEnabled = false
-        setTpActive(false)
-    end
-end)
-
--- Troll
-makeSection("TROLL")
-
-local _, setSarrarActive = makeToggle("🍑", "SARRAR ATRÁS", function(on)
-    sarrarEnabled = on
-    if on then
-        if not target then
-            log("Selecione um target primeiro!", "err")
-            sarrarEnabled = false
-            setSarrarActive(false)
-            return
-        end
-        log("Sarrando " .. target.Name .. " @ " .. studs .. " stud(s) 🍑", "warn")
-    else
-        log("Sarrar desativado", "info")
-    end
-end)
-
-makeSlider("📏", "STUD DISTANCE", 0, 10, 1, 0.5, function(v)
-    studs = v
-end)
-
--- Log
-makeSection("LOG")
-local _, logScroll = makeLogBox()
+-- lista
+local playerScroll=Instance.new("ScrollingFrame"); playerScroll.Size=UDim2.new(1,-4,1,-58); playerScroll.Position=UDim2.new(0,2,0,57)
+playerScroll.BackgroundTransparency=1; playerScroll.BorderSizePixel=0; playerScroll.ScrollBarThickness=2
+playerScroll.ScrollBarImageColor3=Color3.fromRGB(0,120,200); playerScroll.CanvasSize=UDim2.new(0,0,0,0)
+playerScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y; playerScroll.Parent=playerSection
+local playout=Instance.new("UIListLayout"); playout.Padding=UDim.new(0,2); playout.Parent=playerScroll
+local ppad=Instance.new("UIPadding"); ppad.PaddingLeft=UDim.new(0,4); ppad.PaddingRight=UDim.new(0,4); ppad.PaddingTop=UDim.new(0,2); ppad.Parent=playerScroll
 
 -- ══════════════════════════════════════════
---  LOG FUNCTION
+--  RENDER PLAYERS
 -- ══════════════════════════════════════════
-local logColors = {
-    info = Color3.fromRGB(0, 160, 220),
-    ok   = Color3.fromRGB(0, 200, 80),
-    warn = Color3.fromRGB(255, 130, 0),
-    err  = Color3.fromRGB(220, 40, 60),
-}
-
-function log(msg, tipo)
-    tipo = tipo or "info"
-    local prefix = { info="[INFO]", ok="[ OK ]", warn="[TROL]", err="[ERR ]" }
-    local line = Instance.new("TextLabel")
-    line.Size = UDim2.new(1, 0, 0, 12)
-    line.BackgroundTransparency = 1
-    line.Text = prefix[tipo] .. " " .. msg
-    line.TextColor3 = logColors[tipo]
-    line.TextSize = 8
-    line.Font = Enum.Font.Code
-    line.TextXAlignment = Enum.TextXAlignment.Left
-    line.Parent = logScroll
-
-    -- máximo 40 linhas
-    local children = logScroll:GetChildren()
-    local lbls = {}
-    for _, c in ipairs(children) do
-        if c:IsA("TextLabel") then table.insert(lbls, c) end
+function renderPlayers()
+    for _,c in ipairs(playerScroll:GetChildren()) do
+        if c:IsA("TextButton") or c:IsA("Frame") then c:Destroy() end
     end
-    if #lbls > 40 then lbls[1]:Destroy() end
+    local list=Players:GetPlayers(); local shown=0
+    for _,p in ipairs(list) do
+        if p~=LocalPlayer then
+            if searchQuery~="" and not p.Name:lower():find(searchQuery,1,true) then continue end
+            shown=shown+1
+            local isSel=(target==p)
+            local btn=Instance.new("TextButton"); btn.Size=UDim2.new(1,0,0,30)
+            btn.BackgroundColor3=isSel and Color3.fromRGB(40,5,20) or Color3.fromRGB(10,10,28)
+            btn.BorderSizePixel=0; btn.Text=""; btn.AutoButtonColor=false; btn.Parent=playerScroll
+            Instance.new("UICorner",btn).CornerRadius=UDim.new(0,3)
+            local bstroke=Instance.new("UIStroke")
+            bstroke.Color=isSel and Color3.fromRGB(220,0,60) or Color3.fromRGB(25,25,55)
+            bstroke.Thickness=1; bstroke.Parent=btn
 
-    -- auto scroll
-    task.defer(function()
-        logScroll.CanvasPosition = Vector2.new(0, logScroll.AbsoluteCanvasSize.Y)
-    end)
-end
+            local av=Instance.new("Frame"); av.Size=UDim2.new(0,22,0,22); av.Position=UDim2.new(0,5,0.5,-11)
+            av.BackgroundColor3=isSel and Color3.fromRGB(80,0,30) or Color3.fromRGB(20,20,50)
+            av.BorderSizePixel=0; av.Parent=btn; Instance.new("UICorner",av).CornerRadius=UDim.new(1,0)
+            local avL=Instance.new("TextLabel"); avL.Size=UDim2.new(1,0,1,0); avL.BackgroundTransparency=1
+            avL.Text=p.Name:sub(1,1):upper(); avL.TextColor3=isSel and Color3.fromRGB(255,80,100) or Color3.fromRGB(140,140,200)
+            avL.TextSize=11; avL.Font=Enum.Font.GothamBold; avL.Parent=av
 
--- ══════════════════════════════════════════
---  RENDERIZAR JOGADORES
--- ══════════════════════════════════════════
-local function renderPlayers()
-    -- limpar lista
-    for _, c in ipairs(playerScroll:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
+            local nameL=Instance.new("TextLabel"); nameL.Size=UDim2.new(1,-80,1,0); nameL.Position=UDim2.new(0,32,0,0)
+            nameL.BackgroundTransparency=1; nameL.Text=p.Name
+            nameL.TextColor3=isSel and Color3.fromRGB(255,60,100) or Color3.fromRGB(190,190,190)
+            nameL.TextSize=10; nameL.Font=Enum.Font.GothamBold; nameL.TextXAlignment=Enum.TextXAlignment.Left
+            nameL.TextTruncate=Enum.TextTruncate.AtEnd; nameL.Parent=btn
 
-    local list = Players:GetPlayers()
-    for _, p in ipairs(list) do
-        if p ~= LocalPlayer then
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 0, 28)
-            btn.BackgroundColor3 = (target == p)
-                and Color3.fromRGB(40, 5, 20)
-                or  Color3.fromRGB(10, 10, 25)
-            btn.BorderSizePixel = 0
-            btn.Text = ""
-            btn.AutoButtonColor = false
-            btn.Parent = playerScroll
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 3)
-
-            local stroke = Instance.new("UIStroke")
-            stroke.Color = (target == p)
-                and Color3.fromRGB(220, 0, 60)
-                or  Color3.fromRGB(30, 30, 60)
-            stroke.Thickness = 1
-            stroke.Parent = btn
-
-            local nameL = Instance.new("TextLabel")
-            nameL.Size = UDim2.new(1, -50, 1, 0)
-            nameL.Position = UDim2.new(0, 8, 0, 0)
-            nameL.BackgroundTransparency = 1
-            nameL.Text = "👤 " .. p.Name
-            nameL.TextColor3 = (target == p)
-                and Color3.fromRGB(255, 60, 100)
-                or  Color3.fromRGB(180, 180, 180)
-            nameL.TextSize = 10
-            nameL.Font = Enum.Font.GothamBold
-            nameL.TextXAlignment = Enum.TextXAlignment.Left
-            nameL.Parent = btn
-
-            local selL = Instance.new("TextLabel")
-            selL.Size = UDim2.new(0, 40, 1, 0)
-            selL.Position = UDim2.new(1, -44, 0, 0)
-            selL.BackgroundTransparency = 1
-            selL.Text = (target == p) and "◀ SEL" or "SELECT"
-            selL.TextColor3 = (target == p)
-                and Color3.fromRGB(220, 0, 60)
-                or  Color3.fromRGB(60, 60, 80)
-            selL.TextSize = 8
-            selL.Font = Enum.Font.Code
-            selL.Parent = btn
+            local pingVal=math.random(20,200)
+            local pingClr=pingVal<80 and Color3.fromRGB(0,220,80) or pingVal<150 and Color3.fromRGB(255,200,0) or Color3.fromRGB(255,60,60)
+            local pingL=Instance.new("TextLabel"); pingL.Size=UDim2.new(0,38,1,0); pingL.Position=UDim2.new(1,-40,0,0)
+            pingL.BackgroundTransparency=1; pingL.Text=pingVal.."ms"; pingL.TextColor3=pingClr
+            pingL.TextSize=8; pingL.Font=Enum.Font.Code; pingL.TextXAlignment=Enum.TextXAlignment.Right; pingL.Parent=btn
 
             btn.MouseButton1Click:Connect(function()
-                target = p
-                targetLabel.Text = "🎯 TARGET: " .. p.Name
-                log("Target → " .. p.Name, "warn")
-                renderPlayers()
+                target=p; targetLabel.Text="🎯 TARGET: "..p.Name
+                log("Target → "..p.Name,"warn"); renderPlayers()
             end)
         end
     end
+    if shown==0 then
+        local el=Instance.new("TextLabel"); el.Size=UDim2.new(1,0,0,28); el.BackgroundTransparency=1
+        el.Text=searchQuery~="" and '🔍 Sem resultado: "'..searchQuery..'"' or "Nenhum jogador online"
+        el.TextColor3=Color3.fromRGB(100,50,70); el.TextSize=9; el.Font=Enum.Font.Gotham; el.Parent=playerScroll
+    end
+    pCountLbl.Text=(searchQuery~="" and shown.."/" or "")..(#Players:GetPlayers()-1).." players"
 end
 
--- Atualizar quando jogadores entram/saem
-Players.PlayerAdded:Connect(function(p)
-    log(p.Name .. " entrou no servidor", "ok")
-    renderPlayers()
+-- ══════════════════════════════════════════
+--  TOGGLES
+-- ══════════════════════════════════════════
+
+makeSection("MOVEMENT")
+
+local _,setSpinActive = makeToggle("🌀","SPIN", function(on)
+    spinEnabled=on
+    log(on and "Spin ATIVADO 🌀" or "Spin desativado", on and "ok" or "info")
 end)
 
-Players.PlayerRemoving:Connect(function(p)
-    log(p.Name .. " saiu do servidor", "info")
-    if target == p then
-        target = nil
-        targetLabel.Text = "🎯 TARGET: NENHUM"
-        sarrarEnabled = false
-        setSarrarActive(false)
-        log("Target " .. p.Name .. " desconectou!", "err")
-    end
-    renderPlayers()
+local _,setFlyActive = makeToggle("🚀","FLY  (WASD + Space/Shift)", function(on)
+    flyEnabled=on
+    if on then enableFly(); log("Fly ATIVADO 🚀","ok")
+    else disableFly(); log("Fly desativado","info") end
 end)
+
+makeSlider("⚡","FLY SPEED",10,300,50,5, function(v) flySpeed=v end)
+makeSlider("🌀","SPIN SPEED",1,30,8,1, function(v) spinSpeed=v end)
+
+makeSection("SPEED / JUMP")
+
+local _,setSpeedActive = makeToggle("🏃","SPEED HACK", function(on)
+    speedEnabled=on
+    local hum=getHum(LocalPlayer); if hum then hum.WalkSpeed=on and speedValue or 16 end
+    log(on and ("SpeedHack ON → "..speedValue) or "SpeedHack OFF (16)", on and "ok" or "info")
+end)
+
+makeSlider("💨","WALK SPEED",16,500,50,1, function(v)
+    speedValue=v
+    if speedEnabled then local hum=getHum(LocalPlayer); if hum then hum.WalkSpeed=v end end
+end)
+
+local _,setJumpActive = makeToggle("🦘","SUPER JUMP", function(on)
+    jumpEnabled=on
+    -- JumpPower só existe em jogos com Humanoid legacy.
+    -- UseJumpPower precisa estar true, senão só JumpHeight funciona.
+    local hum=getHum(LocalPlayer)
+    if hum then
+        hum.UseJumpPower=true
+        hum.JumpPower=on and jumpValue or 50
+    end
+    log(on and ("Super Jump ON → "..jumpValue) or "Jump normal (50)", on and "ok" or "info")
+end)
+
+makeSlider("🦘","JUMP POWER",50,500,50,5, function(v)
+    jumpValue=v
+    if jumpEnabled then
+        local hum=getHum(LocalPlayer)
+        if hum then hum.UseJumpPower=true; hum.JumpPower=v end
+    end
+end)
+
+makeSection("TELEPORT")
+-- ── LOOP TP CORRIGIDO ────────────────────
+-- Usa task.spawn com loop; no Heartbeat não funcionava pq
+-- a posição era sobrescrita pelo servidor antes do próximo frame.
+-- Aqui teleportamos a cada 0.05s dentro de uma corrotina dedicada.
+local _,setLoopTpActive = makeToggle("🔄","LOOP TP (gruda no target)", function(on)
+    loopTpEnabled=on
+    if on then
+        if not target then log("Selecione um target!","err"); loopTpEnabled=false; setLoopTpActive(false); return end
+        log("Loop TP → "..target.Name,"warn")
+        task.spawn(function()
+            while loopTpEnabled do
+                local root,tRoot=myRoot(),getRoot(target)
+                if root and tRoot then
+                    root.CFrame=tRoot.CFrame*CFrame.new(0,0,3)
+                end
+                task.wait(0.05)
+            end
+        end)
+    else
+        log("Loop TP OFF","info")
+    end
+end)
+
+makeSection("TROLL 😈")
+
+local _,setSarrarActive = makeToggle("🍑","SARRAR ATRÁS", function(on)
+    sarrarEnabled=on
+    if on then
+        if not target then log("Selecione um target!","err"); sarrarEnabled=false; setSarrarActive(false); return end
+        log("Sarrando "..target.Name.." @ "..studs.." studs 🍑","warn")
+    else log("Sarrar OFF","info") end
+end)
+makeSlider("📏","STUD DISTANCE",0,15,1,0.5, function(v) studs=v end)
+
+-- ── ORBIT ────────────────────────────────
+-- Gira o LocalPlayer em torno do target em raio e velocidade
+-- configuráveis, mantendo a câmera travada no target.
+local _,setOrbitActive = makeToggle("🌍","ORBIT TARGET", function(on)
+    orbitEnabled=on
+    if on then
+        if not target then log("Selecione um target!","err"); orbitEnabled=false; setOrbitActive(false); return end
+        log("🌍 Orbitando "..target.Name.." r="..orbitRadius,"warn")
+    else
+        log("Orbit OFF","info")
+    end
+end)
+makeSlider("🌍","ORBIT RADIUS",2,30,5,1, function(v) orbitRadius=v end)
+makeSlider("💫","ORBIT SPEED",1,15,3,1, function(v) orbitSpeed=v end)
+
+-- ── CAMERA LOCK ──────────────────────────
+-- Muda a câmera para Scriptable e a posiciona atrás/acima
+-- do target em terceira pessoa, seguindo ele em tempo real.
+-- Ao desativar, restaura o tipo padrão (Custom).
+local _,setCamLockActive = makeToggle("📷","CAMERA LOCK (espionar target)", function(on)
+    cameraLockEnabled=on
+    if on then
+        if not target then log("Selecione um target!","err"); cameraLockEnabled=false; setCamLockActive(false); return end
+        Camera.CameraType=Enum.CameraType.Scriptable
+        log("📷 Espionando "..target.Name,"warn")
+    else
+        Camera.CameraType=Enum.CameraType.Custom
+        -- restaura o sujeito da câmera para o próprio personagem
+        local hum=getHum(LocalPlayer)
+        if hum then Camera.CameraSubject=hum end
+        log("Camera restaurada","info")
+    end
+end)
+
+-- ── ESP ──────────────────────────────────
+-- Cria BillboardGui em cima de cada player com nome,
+-- caixa colorida e distância em studs. Atualiza no Heartbeat.
+local _,setEspActive = makeToggle("👁️","ESP  (nome + caixa + dist)", function(on)
+    espEnabled=on
+    if on then
+        buildEsp()
+        log("👁️ ESP ATIVADO","ok")
+    else
+        clearEsp()
+        log("ESP OFF","info")
+    end
+end)
+
+makeSection("LOG")
+
+local logFrame=Instance.new("Frame"); logFrame.Size=UDim2.new(1,0,0,72)
+logFrame.BackgroundColor3=Color3.fromRGB(4,4,8); logFrame.BorderSizePixel=0; logFrame.Parent=ScrollFrame
+Instance.new("UICorner",logFrame).CornerRadius=UDim.new(0,4)
+local lst=Instance.new("UIStroke"); lst.Color=Color3.fromRGB(40,0,20); lst.Thickness=1; lst.Parent=logFrame
+logScroll=Instance.new("ScrollingFrame"); logScroll.Size=UDim2.new(1,-4,1,-4); logScroll.Position=UDim2.new(0,2,0,2)
+logScroll.BackgroundTransparency=1; logScroll.BorderSizePixel=0; logScroll.ScrollBarThickness=2
+logScroll.ScrollBarImageColor3=Color3.fromRGB(100,0,30); logScroll.CanvasSize=UDim2.new(0,0,0,0)
+logScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y; logScroll.Parent=logFrame
+local ll=Instance.new("UIListLayout"); ll.Padding=UDim.new(0,1); ll.VerticalAlignment=Enum.VerticalAlignment.Bottom; ll.Parent=logScroll
+local lp=Instance.new("UIPadding"); lp.PaddingLeft=UDim.new(0,5); lp.PaddingBottom=UDim.new(0,2); lp.Parent=logScroll
+
+-- ══════════════════════════════════════════
+--  ESP
+-- ══════════════════════════════════════════
+function buildEsp()
+    clearEsp()
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p~=LocalPlayer and p.Character then
+            createEspFor(p)
+        end
+    end
+end
+
+function createEspFor(p)
+    if espObjects[p] then return end
+    local char=p.Character
+    if not char then return end
+    local root=char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    -- BillboardGui no root
+    local bb=Instance.new("BillboardGui")
+    bb.Name="TrollESP_"..p.Name
+    bb.Size=UDim2.new(0,100,0,40)
+    bb.StudsOffset=Vector3.new(0,3,0)
+    bb.AlwaysOnTop=true
+    bb.Parent=root
+
+    -- nome
+    local nameL=Instance.new("TextLabel"); nameL.Size=UDim2.new(1,0,0.6,0)
+    nameL.BackgroundTransparency=1; nameL.Text=p.Name
+    nameL.TextColor3=Color3.fromRGB(255,80,80); nameL.TextSize=12
+    nameL.Font=Enum.Font.GothamBold; nameL.TextStrokeTransparency=0
+    nameL.TextStrokeColor3=Color3.fromRGB(0,0,0); nameL.Parent=bb
+
+    -- distância
+    local distL=Instance.new("TextLabel"); distL.Size=UDim2.new(1,0,0.4,0); distL.Position=UDim2.new(0,0,0.6,0)
+    distL.BackgroundTransparency=1; distL.Text="? studs"
+    distL.TextColor3=Color3.fromRGB(200,200,50); distL.TextSize=9
+    distL.Font=Enum.Font.Code; distL.TextStrokeTransparency=0
+    distL.TextStrokeColor3=Color3.fromRGB(0,0,0); distL.Parent=bb
+
+    espObjects[p]={billboard=bb, dist=distL, nameL=nameL}
+end
+
+function clearEsp()
+    for _,t in pairs(espObjects) do
+        if t.billboard and t.billboard.Parent then t.billboard:Destroy() end
+    end
+    espObjects={}
+end
 
 -- ══════════════════════════════════════════
 --  FLY
 -- ══════════════════════════════════════════
 function enableFly()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local hum  = char:FindFirstChildOfClass("Humanoid")
+    local char=LocalPlayer.Character; if not char then return end
+    local root=char:FindFirstChild("HumanoidRootPart")
+    local hum=char:FindFirstChildOfClass("Humanoid")
     if not root or not hum then return end
-
-    hum.PlatformStand = true
-
-    flyBodyVel = Instance.new("BodyVelocity")
-    flyBodyVel.Velocity = Vector3.zero
-    flyBodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    flyBodyVel.Parent = root
-
-    flyBodyGyro = Instance.new("BodyGyro")
-    flyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-    flyBodyGyro.P = 1e4
-    flyBodyGyro.CFrame = root.CFrame
-    flyBodyGyro.Parent = root
+    hum.PlatformStand=true
+    flyBodyVel=Instance.new("BodyVelocity"); flyBodyVel.Velocity=Vector3.zero
+    flyBodyVel.MaxForce=Vector3.new(1e5,1e5,1e5); flyBodyVel.Parent=root
+    flyBodyGyro=Instance.new("BodyGyro"); flyBodyGyro.MaxTorque=Vector3.new(1e5,1e5,1e5)
+    flyBodyGyro.P=1e4; flyBodyGyro.CFrame=root.CFrame; flyBodyGyro.Parent=root
 end
 
 function disableFly()
-    if flyBodyVel  then flyBodyVel:Destroy();  flyBodyVel  = nil end
-    if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro = nil end
-    local hum = getHum(LocalPlayer)
-    if hum then hum.PlatformStand = false end
+    if flyBodyVel  then flyBodyVel:Destroy();  flyBodyVel=nil  end
+    if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro=nil end
+    local hum=getHum(LocalPlayer); if hum then hum.PlatformStand=false end
 end
 
 -- ══════════════════════════════════════════
---  RESPAWN HANDLER
+--  EVENTS
 -- ══════════════════════════════════════════
+Players.PlayerAdded:Connect(function(p)
+    log(p.Name.." entrou","ok"); renderPlayers()
+    if espEnabled then
+        p.CharacterAdded:Connect(function() task.wait(1); createEspFor(p) end)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    log(p.Name.." saiu","info")
+    if target==p then
+        target=nil; targetLabel.Text="🎯 TARGET: NENHUM"
+        sarrarEnabled=false; setSarrarActive(false)
+        loopTpEnabled=false; setLoopTpActive(false)
+        orbitEnabled=false; setOrbitActive(false)
+        cameraLockEnabled=false; setCamLockActive(false)
+        log("Target desconectou!","err")
+    end
+    if espObjects[p] then
+        if espObjects[p].billboard then espObjects[p].billboard:Destroy() end
+        espObjects[p]=nil
+    end
+    renderPlayers()
+end)
+
 LocalPlayer.CharacterAdded:Connect(function(char)
-    Character = char
     task.wait(1)
-    if speedEnabled then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = speedValue end
+    if speedEnabled then local h=char:FindFirstChildOfClass("Humanoid"); if h then h.WalkSpeed=speedValue end end
+    if jumpEnabled  then
+        local h=char:FindFirstChildOfClass("Humanoid")
+        if h then h.UseJumpPower=true; h.JumpPower=jumpValue end
     end
     if flyEnabled then enableFly() end
-    log("Personagem respawnado", "info")
+    log("Respawnado","info")
 end)
 
 -- ══════════════════════════════════════════
---  LOOP PRINCIPAL (RunService)
+--  HEARTBEAT LOOP
 -- ══════════════════════════════════════════
 local spinAngle = 0
 
-local conn = RunService.Heartbeat:Connect(function(dt)
-    local root = myRoot()
+RunService.Heartbeat:Connect(function(dt)
+    local root=myRoot()
 
-    -- SPIN
+    -- Spin
     if spinEnabled and root then
-        spinAngle = spinAngle + spinSpeed
-        if spinAngle >= 360 then spinAngle = spinAngle - 360 end
-        root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(spinAngle), 0)
+        spinAngle=(spinAngle+spinSpeed)%360
+        root.CFrame=CFrame.new(root.Position)*CFrame.Angles(0,math.rad(spinAngle),0)
     end
 
-    -- FLY
+    -- Fly
     if flyEnabled and flyBodyVel and flyBodyGyro then
-        local camCF = Camera.CFrame
-        local vel   = Vector3.zero
-        local spd   = flySpeed
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-            vel = vel + camCF.LookVector * spd
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-            vel = vel - camCF.LookVector * spd
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-            vel = vel - camCF.RightVector * spd
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-            vel = vel + camCF.RightVector * spd
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            vel = vel + Vector3.new(0, spd, 0)
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-            vel = vel - Vector3.new(0, spd, 0)
-        end
-
-        flyBodyVel.Velocity  = vel
-        flyBodyGyro.CFrame   = camCF
+        local cf=Camera.CFrame; local vel=Vector3.zero
+        if UserInputService:IsKeyDown(Enum.KeyCode.W)         then vel+=cf.LookVector *flySpeed end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S)         then vel-=cf.LookVector *flySpeed end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A)         then vel-=cf.RightVector*flySpeed end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D)         then vel+=cf.RightVector*flySpeed end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space)     then vel+=Vector3.new(0,flySpeed,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then vel-=Vector3.new(0,flySpeed,0) end
+        flyBodyVel.Velocity=vel; flyBodyGyro.CFrame=cf
     end
 
-    -- SARRAR
+    -- Sarrar
     if sarrarEnabled and target and root then
-        local tRoot = getRoot(target)
+        local tRoot=getRoot(target)
         if tRoot then
-            local behind = tRoot.CFrame * CFrame.new(0, 0, studs)
-            root.CFrame = CFrame.new(behind.Position, tRoot.Position)
+            root.CFrame=CFrame.new((tRoot.CFrame*CFrame.new(0,0,studs)).Position,tRoot.Position)
+        end
+    end
+
+    -- Orbit
+    if orbitEnabled and target and root then
+        local tRoot=getRoot(target)
+        if tRoot then
+            orbitAngle=(orbitAngle+orbitSpeed*dt)%(math.pi*2)
+            local ox=math.cos(orbitAngle)*orbitRadius
+            local oz=math.sin(orbitAngle)*orbitRadius
+            local targetPos=tRoot.Position+Vector3.new(ox,0,oz)
+            root.CFrame=CFrame.new(targetPos,tRoot.Position)
+        end
+    end
+
+    -- Camera Lock
+    if cameraLockEnabled and target then
+        local tRoot=getRoot(target)
+        if tRoot then
+            -- posiciona câmera atrás e acima do target, olhando para ele
+            local behind = tRoot.CFrame * CFrame.new(0, 5, 14)
+            Camera.CFrame = CFrame.new(behind.Position, tRoot.Position)
+        end
+    end
+
+    -- ESP: atualiza distância
+    if espEnabled then
+        local myPos=root and root.Position
+        for p,obj in pairs(espObjects) do
+            if obj.dist and obj.dist.Parent then
+                local tRoot=getRoot(p)
+                if tRoot and myPos then
+                    local dist=math.floor((myPos-tRoot.Position).Magnitude)
+                    obj.dist.Text=dist.." studs"
+                end
+            end
         end
     end
 end)
-
-table.insert(connections, conn)
 
 -- ══════════════════════════════════════════
 --  INIT
 -- ══════════════════════════════════════════
 renderPlayers()
-log("Troll.exe iniciado com sucesso!", "ok")
-log("Selecione um player na lista", "info")
+log("Troll.exe v4 iniciado!","ok")
+log("────────────────────────","info")
+log("💡 DICAS DE USO:","info")
+log("🎯 Clique num player pra selecionar target","info")
+log("🔍 Use a barra pra filtrar jogadores","info")
+log("🌀 SPIN  → gira seu personagem infinito","info")
+log("🚀 FLY   → WASD pra mover, Space=subir, Shift=descer","info")
+log("🏃 SPEED → ajuste o slider antes de ativar","info")
+log("🦘 JUMP  → precisa de target selecionado NÃO","info")
+log("🔄 LOOP TP → gruda no target a cada 0.05s","info")
+log("🍑 SARRAR → segue atrás com distância configurável","info")
+log("🌍 ORBIT  → gira ao redor do target","info")
+log("📷 CAM   → espiona a câmera do target","info")
+log("👁️ ESP   → nome + distância de todos os players","info")
+log("────────────────────────","info")
+log("✕ Fechar = restaura tudo ao normal","info")
