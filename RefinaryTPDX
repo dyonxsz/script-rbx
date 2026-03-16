@@ -386,12 +386,25 @@ do
             if fbLoop2 then fbLoop2:Disconnect() end
             fbLoop2 = RunService.Heartbeat:Connect(function()
                 if not fullbrightOn then fbLoop2:Disconnect(); fbLoop2=nil; return end
-                if Lighting.Ambient ~= Color3.new(1,1,1) then fbApply2() end
+                -- Reaplica sempre (nao so quando diferente) para resistir a tweens
+                Lighting.Ambient        = Color3.new(1,1,1)
+                Lighting.Brightness     = 2
+                Lighting.FogEnd         = 1e9
+                Lighting.FogStart       = 1e9
+                Lighting.GlobalShadows  = false
+                Lighting.OutdoorAmbient = Color3.new(1,1,1)
+                -- Mantém efeitos off
                 for _, e in ipairs(fbDisabled2) do
                     if e and e.Parent and e.Enabled then
                         pcall(function() e.Enabled=false end)
                     end
                 end
+                -- Atmosphere
+                local atm2=Lighting:FindFirstChildOfClass("Atmosphere")
+                if atm2 then pcall(function()
+                    if atm2.Density~=0 then atm2.Density=0 end
+                    if atm2.Haze~=0    then atm2.Haze=0    end
+                end) end
             end)
         else
             if fbLoop2 then fbLoop2:Disconnect(); fbLoop2=nil end
@@ -1862,12 +1875,9 @@ task.spawn(function()
     end
 end)
 
--- ESP DE DROPS e AUTO-DESCOBERTA — tudo em do blocks (zero locals no escopo principal)
+-- ESP DE DROPS e AUTO-DESCOBERTA
 do
-    -- Drop ESP: MaterialParts em Workspace.Grab.MaterialPart
-    local dropESP2    = {}
-    local dropESPOn2  = true
-    local dropConn2   = nil
+    local dropESP2={};local dropESPOn2=true;local dropConn2=nil
 
     local function refreshDrop()
         if not dropESPOn2 then
@@ -1878,100 +1888,73 @@ do
             end
             return
         end
-        local grabF = workspace:FindFirstChild("Grab"); if not grabF then return end
-        local mpF   = grabF:FindFirstChild("MaterialPart") or grabF
-        local active = {}
-        for _, obj in pairs(mpF:GetChildren()) do
-            if obj:IsA("BasePart") then
-                active[obj]=true
-                if not dropESP2[obj] then
-                    local dropName = mpF.Name
-                    for _, ch in pairs(obj:GetChildren()) do
-                        if ch:IsA("StringValue") and ch.Value~="" then dropName=ch.Value; break end
-                        if ch:IsA("BillboardGui") then
-                            local tl=ch:FindFirstChildOfClass("TextLabel")
-                            if tl and tl.Text~="" then dropName=tl.Text; break end
-                        end
-                    end
-                    local col = Color3.fromRGB(255,200,60)
-                    for _, od in ipairs(ORE_DATA) do
-                        local low=string.lower(dropName)
-                        if low:find(string.lower(od.name),1,true)
-                        or (od.drop and low:find(string.lower(od.drop),1,true)) then
-                            col=od.color; break
-                        end
-                    end
-                    local hl=Instance.new("Highlight"); hl.Adornee=obj
-                    hl.FillColor=col; hl.OutlineColor=col
-                    hl.FillTransparency=0.35; hl.OutlineTransparency=0
-                    hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop; hl.Parent=workspace
-                    local bb=Instance.new("BillboardGui"); bb.Adornee=obj
-                    bb.Size=UDim2.new(0,110,0,20); bb.StudsOffset=Vector3.new(0,3,0)
-                    bb.AlwaysOnTop=true; bb.MaxDistance=120; bb.Parent=workspace
-                    local lb3=Instance.new("TextLabel",bb); lb3.Size=UDim2.new(1,0,1,0)
-                    lb3.BackgroundTransparency=1; lb3.TextColor3=col
-                    lb3.Font=Enum.Font.GothamBold; lb3.TextSize=12; lb3.Text=dropName
-                    lb3.TextStrokeTransparency=0; lb3.TextStrokeColor3=Color3.new(0,0,0)
-                    dropESP2[obj]={hl=hl,bb=bb}
+        local cands={}
+        -- Workspace.Grab.MaterialPart (confirmado pelo spy)
+        local grabF=workspace:FindFirstChild("Grab")
+        if grabF then
+            local mpF=grabF:FindFirstChild("MaterialPart")
+            if mpF then for _,o in pairs(mpF:GetChildren()) do if o:IsA("BasePart") then table.insert(cands,o) end end end
+            for _,o in pairs(grabF:GetChildren()) do if o:IsA("BasePart") and o.Name=="MaterialPart" then table.insert(cands,o) end end
+        end
+        -- fallback: workspace direto
+        for _,o in pairs(workspace:GetChildren()) do if o:IsA("BasePart") and o.Name=="MaterialPart" then table.insert(cands,o) end end
+
+        local active={}
+        for _,obj in pairs(cands) do
+            active[obj]=true
+            if not dropESP2[obj] then
+                local dn="Drop"
+                for _,ch in pairs(obj:GetChildren()) do
+                    if ch:IsA("StringValue") and ch.Value~="" then dn=ch.Value; break end
+                    if ch:IsA("BillboardGui") then local tl=ch:FindFirstChildOfClass("TextLabel"); if tl and tl.Text~="" then dn=tl.Text; break end end
                 end
+                local col=Color3.fromRGB(255,200,60)
+                for _,od in ipairs(ORE_DATA) do
+                    local low=string.lower(dn)
+                    if low:find(string.lower(od.name),1,true) or (od.drop and low:find(string.lower(od.drop),1,true)) then col=od.color;break end
+                end
+                local hl=Instance.new("Highlight"); hl.Adornee=obj; hl.FillColor=col; hl.OutlineColor=col
+                hl.FillTransparency=0.35; hl.OutlineTransparency=0; hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop; hl.Parent=workspace
+                local bb=Instance.new("BillboardGui"); bb.Adornee=obj; bb.Size=UDim2.new(0,110,0,20)
+                bb.StudsOffset=Vector3.new(0,3,0); bb.AlwaysOnTop=true; bb.MaxDistance=120; bb.Parent=workspace
+                local lb3=Instance.new("TextLabel",bb); lb3.Size=UDim2.new(1,0,1,0); lb3.BackgroundTransparency=1
+                lb3.TextColor3=col; lb3.Font=Enum.Font.GothamBold; lb3.TextSize=12; lb3.Text=dn
+                lb3.TextStrokeTransparency=0; lb3.TextStrokeColor3=Color3.new(0,0,0)
+                dropESP2[obj]={hl=hl,bb=bb}
             end
         end
         for obj,d in pairs(dropESP2) do
             if not active[obj] or not obj.Parent then
-                pcall(function() d.hl:Destroy() end)
-                pcall(function() if d.bb then d.bb:Destroy() end end)
-                dropESP2[obj]=nil
+                pcall(function() d.hl:Destroy() end); pcall(function() if d.bb then d.bb:Destroy() end end); dropESP2[obj]=nil
             end
         end
     end
 
     dropConn2=true
+    task.spawn(function() while dropConn2 do pcall(refreshDrop); task.wait(0.5) end end)
+
+    local dtb=Instance.new("TextButton",espCtrl); dtb.Size=UDim2.new(0,120,0,22); dtb.Position=UDim2.new(0,4,0,32)
+    dtb.BackgroundColor3=Color3.fromRGB(160,100,10); dtb.BorderSizePixel=0; dtb.Text="Drops ESP: ON"
+    dtb.TextColor3=Color3.new(1,1,1); dtb.Font=Enum.Font.GothamBold; dtb.TextSize=9; dtb.ZIndex=13
+    Instance.new("UICorner",dtb).CornerRadius=UDim.new(0,6)
+    dtb.MouseButton1Click:Connect(function()
+        dropESPOn2=not dropESPOn2; dtb.Text=dropESPOn2 and "Drops ESP: ON" or "Drops ESP: OFF"
+        dtb.BackgroundColor3=dropESPOn2 and Color3.fromRGB(160,100,10) or C.hk
+    end)
+    local dcl=Instance.new("TextLabel",espCtrl); dcl.Size=UDim2.new(0,190,0,22); dcl.Position=UDim2.new(0,128,0,32)
+    dcl.BackgroundTransparency=1; dcl.Text="Drops: 0"; dcl.TextColor3=C.sub
+    dcl.Font=Enum.Font.Gotham; dcl.TextSize=10; dcl.TextXAlignment=Enum.TextXAlignment.Left; dcl.ZIndex=12
     task.spawn(function()
-        while dropConn2 do pcall(refreshDrop); task.wait(0.5) end
+        while OreGui.Parent do task.wait(2); pcall(function() local n=0; for _ in pairs(dropESP2) do n=n+1 end; dcl.Text="Drops: "..n end) end
     end)
-
-    -- Botao toggle na espCtrl (linha 2)
-    local dropTogBtn2=Instance.new("TextButton",espCtrl)
-    dropTogBtn2.Size=UDim2.new(0,120,0,22); dropTogBtn2.Position=UDim2.new(0,4,0,32)
-    dropTogBtn2.BackgroundColor3=Color3.fromRGB(160,100,10); dropTogBtn2.BorderSizePixel=0
-    dropTogBtn2.Text="Drops ESP: ON"; dropTogBtn2.TextColor3=Color3.new(1,1,1)
-    dropTogBtn2.Font=Enum.Font.GothamBold; dropTogBtn2.TextSize=9; dropTogBtn2.ZIndex=13
-    Instance.new("UICorner",dropTogBtn2).CornerRadius=UDim.new(0,6)
-    dropTogBtn2.MouseButton1Click:Connect(function()
-        dropESPOn2=not dropESPOn2
-        dropTogBtn2.Text=dropESPOn2 and "Drops ESP: ON" or "Drops ESP: OFF"
-        dropTogBtn2.BackgroundColor3=dropESPOn2 and Color3.fromRGB(160,100,10) or C.hk
-    end)
-
-    local dropCntLbl2=Instance.new("TextLabel",espCtrl)
-    dropCntLbl2.Size=UDim2.new(0,190,0,22); dropCntLbl2.Position=UDim2.new(0,128,0,32)
-    dropCntLbl2.BackgroundTransparency=1; dropCntLbl2.Text="Drops: 0"
-    dropCntLbl2.TextColor3=C.sub; dropCntLbl2.Font=Enum.Font.Gotham
-    dropCntLbl2.TextSize=10; dropCntLbl2.TextXAlignment=Enum.TextXAlignment.Left
-    dropCntLbl2.ZIndex=12
-
-    -- Atualiza contador de drops no loop de qty existente (injeta via tarefa separada)
-    task.spawn(function()
-        while OreGui.Parent do
-            task.wait(2)
-            pcall(function()
-                local n=0; for _ in pairs(dropESP2) do n=n+1 end
-                dropCntLbl2.Text="Drops: "..n
-            end)
-        end
-    end)
-
-    -- Expande espCtrl para caber linha 2
-    espCtrl.Size = UDim2.new(1,-12,0,58)
-    oreScroll.Size = UDim2.new(1,-12,1,-116)
-    oreScroll.Position = UDim2.new(0,6,0,114)
+    espCtrl.Size=UDim2.new(1,-12,0,58)
+    oreScroll.Size=UDim2.new(1,-12,1,-116); oreScroll.Position=UDim2.new(0,6,0,114)
 end
 
 do
-    -- Auto-descoberta de minerios novos
-    local knownN={};
-    for _,od in ipairs(ORE_DATA) do knownN[od.name]=true end
-    local DISC=("DXTP_ores_"..tostring(game.PlaceId)..".json")
+    -- Auto-descoberta: ChildRemoved captura ANTES da pedra sumir
+    local knownN={}; for _,od in ipairs(ORE_DATA) do knownN[od.name]=true end
+    local DISC="DXTP_ores_"..tostring(game.PlaceId)..".json"
     local HS2=game:GetService("HttpService")
 
     local function autoCol(name)
@@ -1989,89 +1972,98 @@ do
         sep.BackgroundColor3=Color3.fromRGB(20,60,40); sep.BorderSizePixel=0; sep.ZIndex=12
         Instance.new("UICorner",sep).CornerRadius=UDim.new(0,5)
         local sl=Instance.new("TextLabel",sep); sl.Size=UDim2.new(1,-8,1,0); sl.Position=UDim2.new(0,8,0,0)
-        sl.BackgroundTransparency=1; sl.Text="* Descoberto: "..od.name
-        sl.TextColor3=Color3.fromRGB(100,255,150); sl.Font=Enum.Font.GothamBold
-        sl.TextSize=10; sl.TextXAlignment=Enum.TextXAlignment.Left; sl.ZIndex=13
+        sl.BackgroundTransparency=1; sl.Text="* Novo: "..od.name; sl.TextColor3=Color3.fromRGB(100,255,150)
+        sl.Font=Enum.Font.GothamBold; sl.TextSize=10; sl.TextXAlignment=Enum.TextXAlignment.Left; sl.ZIndex=13
         local row=Instance.new("Frame",oreScroll); row.Size=UDim2.new(1,0,0,30)
         row.BackgroundColor3=C.card; row.BorderSizePixel=0; row.ZIndex=12
         Instance.new("UICorner",row).CornerRadius=UDim.new(0,6)
         local bar=Instance.new("Frame",row); bar.Size=UDim2.new(0,4,0.8,0); bar.Position=UDim2.new(0,0,0.1,0)
-        bar.BackgroundColor3=od.color; bar.BorderSizePixel=0; bar.ZIndex=13
-        Instance.new("UICorner",bar).CornerRadius=UDim.new(0,3)
+        bar.BackgroundColor3=od.color; bar.BorderSizePixel=0; bar.ZIndex=13; Instance.new("UICorner",bar).CornerRadius=UDim.new(0,3)
         local dot=Instance.new("TextButton",row); dot.Size=UDim2.new(0,22,0,22); dot.Position=UDim2.new(0,8,0,4)
         dot.BackgroundColor3=od.color; dot.BorderSizePixel=0; dot.Text="●"; dot.TextColor3=Color3.new(1,1,1)
-        dot.Font=Enum.Font.GothamBold; dot.TextSize=14; dot.ZIndex=14
-        Instance.new("UICorner",dot).CornerRadius=UDim.new(1,0)
+        dot.Font=Enum.Font.GothamBold; dot.TextSize=14; dot.ZIndex=14; Instance.new("UICorner",dot).CornerRadius=UDim.new(1,0)
         local nL=Instance.new("TextLabel",row); nL.Size=UDim2.new(0,120,1,0); nL.Position=UDim2.new(0,34,0,0)
         nL.BackgroundTransparency=1; nL.Text=od.name; nL.TextColor3=od.color
         nL.Font=Enum.Font.GothamBold; nL.TextSize=12; nL.TextXAlignment=Enum.TextXAlignment.Left; nL.ZIndex=13
         local tpB=Instance.new("TextButton",row); tpB.Size=UDim2.new(0,70,0,22); tpB.Position=UDim2.new(0,210,0,4)
-        tpB.BackgroundColor3=C.accent; tpB.BorderSizePixel=0; tpB.Text="▶ TP"
-        tpB.TextColor3=Color3.new(1,1,1); tpB.Font=Enum.Font.GothamBold; tpB.TextSize=11; tpB.ZIndex=14
-        Instance.new("UICorner",tpB).CornerRadius=UDim.new(0,6)
+        tpB.BackgroundColor3=C.accent; tpB.BorderSizePixel=0; tpB.Text="▶ TP"; tpB.TextColor3=Color3.new(1,1,1)
+        tpB.Font=Enum.Font.GothamBold; tpB.TextSize=11; tpB.ZIndex=14; Instance.new("UICorner",tpB).CornerRadius=UDim.new(0,6)
         local capN=od.name
         dot.MouseButton1Click:Connect(function()
-            oreActive[capN]=not oreActive[capN]
-            dot.Text=oreActive[capN] and "●" or "○"
+            oreActive[capN]=not oreActive[capN]; dot.Text=oreActive[capN] and "●" or "○"
             dot.BackgroundColor3=oreActive[capN] and od.color or C.card
         end)
         tpB.MouseButton1Click:Connect(function() tpToNearestOre(capN) end)
     end
 
-    -- Carrega descobertos anteriores
+    local function saveDisc()
+        pcall(function()
+            local t2={}; for _,o in ipairs(ORE_DATA) do
+                if o._discovered then table.insert(t2,{name=o.name,drop=o.drop or "",tier=o.tier,cr=o.color.R,cg=o.color.G,cb=o.color.B}) end
+            end; writefile(DISC,HS2:JSONEncode(t2))
+        end)
+    end
+
+    local function registerOre(name,cfg)
+        if knownN[name] or name=="_Decoration" then return end
+        local dv=cfg and cfg:FindFirstChild("Drop"); local tv=cfg and cfg:FindFirstChild("Tier")
+        local dropN=dv and dv.Value or name; local tier=tv and math.clamp(math.floor(tv.Value),1,5) or 0
+        local col=autoCol(name)
+        local od={name=name,drop=dropN,tier=tier,color=col,_discovered=true}
+        table.insert(ORE_DATA,od); oreActive[name]=true; knownN[name]=true
+        addDiscRow(od); saveDisc()
+        print("[RefinaryTPDX] Novo minerio: "..name.." | drop="..dropN)
+    end
+
+    -- Carrega anteriores
     pcall(function()
         local ok,raw=pcall(readfile,DISC); if not ok or not raw or raw=="" then return end
         local ok2,t=pcall(function() return HS2:JSONDecode(raw) end); if not ok2 or not t then return end
         for _,e in ipairs(t) do
             if not knownN[e.name] then
                 local col=Color3.fromRGB(math.floor((e.cr or 0.5)*255),math.floor((e.cg or 0.5)*255),math.floor((e.cb or 0.5)*255))
-                local od={name=e.name,drop=e.drop,tier=e.tier or 0,color=col}
-                table.insert(ORE_DATA,od); oreActive[od.name]=true; knownN[od.name]=true
-                addDiscRow(od)
+                local od={name=e.name,drop=e.drop,tier=e.tier or 0,color=col,_discovered=true}
+                table.insert(ORE_DATA,od); oreActive[od.name]=true; knownN[od.name]=true; addDiscRow(od)
             end
         end
     end)
 
-    -- Notif visual
-    local notif=Instance.new("Frame",OreGui); notif.Size=UDim2.new(1,-12,0,32)
-    notif.Position=UDim2.new(0,6,1,-44); notif.BackgroundColor3=Color3.fromRGB(15,70,35)
-    notif.BorderSizePixel=0; notif.ZIndex=20; notif.Visible=false
-    Instance.new("UICorner",notif).CornerRadius=UDim.new(0,7)
-    local notifL=Instance.new("TextLabel",notif); notifL.Size=UDim2.new(1,-8,1,0); notifL.Position=UDim2.new(0,8,0,0)
-    notifL.BackgroundTransparency=1; notifL.TextColor3=Color3.fromRGB(80,255,140)
-    notifL.Font=Enum.Font.GothamBold; notifL.TextSize=12; notifL.TextXAlignment=Enum.TextXAlignment.Left; notifL.ZIndex=21
+    -- Varre novos imediatamente + ChildRemoved (captura ANTES de sumir)
+    task.spawn(function()
+        for _=1,30 do
+            task.wait(1)
+            local folder=getOresFolder2(); if not folder then continue end
+            -- varre existentes
+            for _,ore in pairs(folder:GetChildren()) do
+                if not knownN[ore.Name] and ore.Name~="_Decoration" then
+                    registerOre(ore.Name, ore:FindFirstChild("Configuration"))
+                end
+            end
+            -- conecta ChildRemoved se ainda nao conectou
+            folder.ChildRemoved:Connect(function(child)
+                registerOre(child.Name, child:FindFirstChild("Configuration"))
+            end)
+            break
+        end
+    end)
 
+    -- PlayerMinedOre como reforco
     local bindD=game.ReplicatedStorage:FindFirstChild("Events")
     if bindD then bindD=bindD:FindFirstChild("PlayerMinedOre") end
     if bindD then
         bindD.Event:Connect(function()
-            task.wait(0.15)
-            local folder=getOresFolder2(); if not folder then return end
-            for _,ore in pairs(folder:GetChildren()) do
-                if ore.Name~="_Decoration" and not knownN[ore.Name] then
-                    local cfg=ore:FindFirstChild("Configuration")
-                    local dv=cfg and cfg:FindFirstChild("Drop")
-                    local tv=cfg and cfg:FindFirstChild("Tier")
-                    local dropN=dv and dv.Value or ore.Name
-                    local tier=tv and math.clamp(math.floor(tv.Value),1,5) or 0
-                    local col=autoCol(ore.Name)
-                    local od={name=ore.Name,drop=dropN,tier=tier,color=col}
-                    table.insert(ORE_DATA,od); oreActive[ore.Name]=true; knownN[ore.Name]=true
-                    addDiscRow(od)
-                    pcall(function()
-                        local t2={}; for _,o in ipairs(ORE_DATA) do
-                            if o.drop then table.insert(t2,{name=o.name,drop=o.drop,tier=o.tier,cr=o.color.R,cg=o.color.G,cb=o.color.B}) end
-                        end
-                        writefile(DISC,HS2:JSONEncode(t2))
-                    end)
-                    notifL.Text="* Novo: "..ore.Name.."  drop="..dropN.."  tier="..tier
-                    notif.Visible=true
-                    task.delay(4,function() pcall(function() notif.Visible=false end) end)
+            task.spawn(function()
+                task.wait(0.3); local folder=getOresFolder2(); if not folder then return end
+                for _,ore in pairs(folder:GetChildren()) do
+                    if not knownN[ore.Name] and ore.Name~="_Decoration" then
+                        registerOre(ore.Name, ore:FindFirstChild("Configuration"))
+                    end
                 end
-            end
+            end)
         end)
     end
 end
+
 do
     local drag,ds,sp = false
     OreHdr.InputBegan:Connect(function(i)
